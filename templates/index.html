@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Chennai BnB PMS{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>Welcome to {{ hotel.name }}</h1>
+    <p style="font-size: 1.1rem; margin: 1rem 0; color: #666;">
+        {{ hotel.location }}
+    </p>
+
+    <div style="margin: 2rem 0;">
+        <h2 style="margin-bottom: 1rem;">Hotel Information</h2>
+        <p><strong>Address:</strong> {{ hotel.address }}</p>
+        <p><strong>Total Rooms:</strong> {{ hotel.total_rooms }}</p>
+        <p><strong>Contact:</strong> {{ hotel.contact }}</p>
+        <p><strong>Email:</strong> {{ hotel.email }}</p>
+        <p><strong>Check-in Time:</strong> {{ hotel.check_in_time }}</p>
+        <p><strong>Check-out Time:</strong> {{ hotel.check_out_time }}</p>
+    </div>
+
+    <div style="margin: 2rem 0;">
+        <h2 style="margin-bottom: 1rem;">Amenities</h2>
+        <ul style="list-style: none; padding: 0;">
+            {% for amenity in hotel.amenities %}
+            <li style="padding: 0.5rem 0; border-bottom: 1px solid #eee;">
+                ✓ {{ amenity }}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div style="margin-top: 2rem;">
+        <a href="/dashboard" class="btn">Go to Dashboard</a>
+        <a href="/new-booking" class="btn btn-success" style="margin-left: 1rem;">Make a Booking</a>
+    </div>
+</div>
+
+<div class="card">
+    <h2 style="margin-bottom: 1rem;">Complete API Documentation</h2>
+    <p style="color: #666; margin-bottom: 1.5rem;">Access every aspect of the PMS programmatically using our comprehensive REST API</p>
+
+    <h3 style="margin: 1.5rem 0 1rem; color: #2c3e50;">📍 Hotel Information</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Endpoint</th>
+                <th>Method</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>/api/hotel-info</code></td>
+                <td><span class="badge badge-info">GET</span></td>
+                <td>Get complete hotel information</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3 style="margin: 1.5rem 0 1rem; color: #2c3e50;">🏠 Room Management</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Endpoint</th>
+                <th>Method</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>/api/rooms</code></td>
+                <td><span class="badge badge-info">GET</span></td>
+                <td>Get all rooms with current guest details</td>
+            </tr>
+            <tr>
+                <td><code>/api/rooms/&lt;id&gt;</code></td>
+                <td><span class="badge badge-info">GET</span> <span class="badge badge-warning">PUT</span></td>
+                <td>Get or update room (status, price) with guest info</td>
+            </tr>
+            <tr>
+                <td><code>/api/rooms/&lt;id&gt;/guest</code></td>
+                <td><span class="badge badge-info">GET</span></td>
+                <td>Get current guest checked into specific room</td>
+            </tr>
+            <tr>
+                <td><code>/api/rooms/available</code></td>
+                <td><span class="badge badge-info">GET</span></td>
+                <td>Get available rooms (params: check_in, check_out)</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3 style="margin: 1.5rem 0 1rem; color: #2c3e50;">📅 Booking Management</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Endpoint</th>
+                <th>Method</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>/api/bookings</code></td>
+                <td><span class="badge badge-info">GET</span> <span class="badge badge-success">POST</span></td>
+                <td>Get all bookings or create new booking</td>
+            </tr>
+            <tr>
+                <td><code>/api/bookings/&lt;id&gt;</code></td>
+                <td><span class="badge badge-info">GET</span> <span class="badge badge-warning">PUT</span> <span class="badge badge-danger">DELETE</span></td>
+                <td>Get, update status, or cancel a booking</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3 style="margin: 1.5rem 0 1rem; color: #2c3e50;">👥 Guest Management</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Endpoint</th>
+                <th>Method</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>/api/guests</code></td>
+                <td><span class="badge badge-info">GET</span></td>
+                <td>Get all guests with booking history</td>
+            </tr>
+            <tr>
+                <td><code>/api/guests/&lt;id&gt;</code></td>
+                <td><span class="badge badge-info">GET</span></td>
+                <td>Get specific guest with all bookings and current room</td>
+            </tr>
+            <tr>
+                <td><code>/api/guests/checked-in</code></td>
+                <td><span class="badge badge-info">GET</span></td>
+                <td>Get all currently checked-in guests with room details</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3 style="margin: 1.5rem 0 1rem; color: #2c3e50;">📊 Statistics</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Endpoint</th>
+                <th>Method</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>/api/occupancy</code></td>
+                <td><span class="badge badge-info">GET</span></td>
+                <td>Get current occupancy statistics</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h2 style="margin-bottom: 1rem;">API Usage Examples</h2>
+
+    <h3 style="margin: 1rem 0;">Get all rooms with guest details</h3>
+    <pre style="background: #f8f9fa; padding: 1rem; border-radius: 5px; overflow-x: auto;">curl http://localhost:5000/api/rooms</pre>
+
+    <h3 style="margin: 1rem 0;">Get specific room's current guest</h3>
+    <pre style="background: #f8f9fa; padding: 1rem; border-radius: 5px; overflow-x: auto;">curl http://localhost:5000/api/rooms/1/guest</pre>
+
+    <h3 style="margin: 1rem 0;">Get all checked-in guests</h3>
+    <pre style="background: #f8f9fa; padding: 1rem; border-radius: 5px; overflow-x: auto;">curl http://localhost:5000/api/guests/checked-in</pre>
+
+    <h3 style="margin: 1rem 0;">Get guest with booking history</h3>
+    <pre style="background: #f8f9fa; padding: 1rem; border-radius: 5px; overflow-x: auto;">curl http://localhost:5000/api/guests/1</pre>
+</div>
+{% endblock %}

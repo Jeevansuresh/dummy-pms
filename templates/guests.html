@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Guests - Chennai BnB PMS{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 2rem;">Guest Management</h1>
+
+<div class="card">
+    <h2 style="margin-bottom: 1.5rem;">All Guests ({{ guests|length }})</h2>
+
+    {% if guests|length > 0 %}
+    <table>
+        <thead>
+            <tr>
+                <th>Guest ID</th>
+                <th>Name</th>
+                <th>Contact</th>
+                <th>ID Proof</th>
+                <th>Current Status</th>
+                <th>Total Bookings</th>
+                <th>Registered</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for guest in guests %}
+            <tr>
+                <td><strong>#{{ guest.guest_id }}</strong></td>
+                <td>{{ guest.name }}</td>
+                <td>
+                    {{ guest.email }}<br>
+                    <small style="color: #666;">{{ guest.phone }}</small>
+                </td>
+                <td>{{ guest.id_proof if guest.id_proof else '-' }}</td>
+                <td>
+                    {% if guest.current_booking %}
+                        {% if guest.current_booking.status == 'checked_in' %}
+                        <span class="badge badge-success">Checked In</span><br>
+                        <small style="color: #666;">Room {{ guest.current_room.room_number }}</small>
+                        {% elif guest.current_booking.status == 'confirmed' %}
+                        <span class="badge badge-info">Booking Confirmed</span><br>
+                        <small style="color: #666;">Room {{ guest.current_room.room_number }}</small>
+                        {% endif %}
+                    {% else %}
+                    <span class="badge badge-warning">No Active Booking</span>
+                    {% endif %}
+                </td>
+                <td>{{ guest.bookings|length }}</td>
+                <td><small>{{ guest.created_at }}</small></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align: center; padding: 3rem; color: #666;">
+        <h3>No guests yet</h3>
+        <p>Guests are automatically created when you make bookings</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2 style="margin-bottom: 1rem;">💡 Guest API Access</h2>
+    <p style="color: #666; margin-bottom: 1rem;">Access guest information programmatically</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Endpoint</th>
+                <th>Method</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>/api/guests</code></td>
+                <td><span class="badge badge-info">GET</span></td>
+                <td>Get all guests with booking history</td>
+            </tr>
+            <tr>
+                <td><code>/api/guests/&lt;id&gt;</code></td>
+                <td><span class="badge badge-info">GET</span></td>
+                <td>Get specific guest with all bookings and current room</td>
+            </tr>
+            <tr>
+                <td><code>/api/guests/checked-in</code></td>
+                <td><span class="badge badge-info">GET</span></td>
+                <td>Get all currently checked-in guests with room details</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}

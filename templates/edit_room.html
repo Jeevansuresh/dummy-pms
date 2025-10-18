@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Room {{ room.room_number }} - Chennai BnB PMS{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 2rem;">Edit Room {{ room.room_number }}</h1>
+
+<div class="card">
+    <h2 style="margin-bottom: 1.5rem;">Room Details</h2>
+
+    <form method="POST" action="/rooms/edit/{{ room.room_id }}">
+        <div class="form-group">
+            <label for="room_number">Room Number (Read Only)</label>
+            <input type="text" id="room_number" value="{{ room.room_number }}" readonly style="background: #f8f9fa;">
+        </div>
+
+        <div class="form-group">
+            <label for="room_type">Room Type (Read Only)</label>
+            <input type="text" id="room_type" value="{{ room.room_type }}" readonly style="background: #f8f9fa;">
+        </div>
+
+        <div class="form-group">
+            <label for="status">Room Status *</label>
+            <select id="status" name="status" required>
+                <option value="available" {% if room.status == 'available' %}selected{% endif %}>Available</option>
+                <option value="occupied" {% if room.status == 'occupied' %}selected{% endif %}>Occupied</option>
+                <option value="maintenance" {% if room.status == 'maintenance' %}selected{% endif %}>Maintenance</option>
+            </select>
+            <p style="font-size: 0.875rem; color: #666; margin-top: 0.5rem;">
+                Change the room status manually. Note: Status auto-updates on bookings.
+            </p>
+        </div>
+
+        <div class="form-group">
+            <label for="base_price">Price per Night (₹) *</label>
+            <input type="number" id="base_price" name="base_price" value="{{ room.base_price }}" required min="100" step="100">
+            <p style="font-size: 0.875rem; color: #666; margin-top: 0.5rem;">
+                Set custom pricing for this room. Changes affect new bookings immediately.
+            </p>
+        </div>
+
+        <div class="form-group">
+            <label>Floor</label>
+            <input type="text" value="Floor {{ room.floor }}" readonly style="background: #f8f9fa;">
+        </div>
+
+        <div class="form-group">
+            <label>Amenities</label>
+            <input type="text" value="{{ room.amenities|join(', ') }}" readonly style="background: #f8f9fa;">
+        </div>
+
+        <div style="margin-top: 2rem; padding: 1rem; background: #d1ecf1; border-radius: 5px; border-left: 4px solid #0c5460;">
+            <h3 style="color: #0c5460; margin-bottom: 0.5rem;">💡 API Access</h3>
+            <p style="color: #0c5460; margin-bottom: 0.5rem;">
+                You can also update this room via API:
+            </p>
+            <code style="display: block; padding: 0.5rem; background: white; border-radius: 3px; color: #e83e8c;">
+                PUT /api/rooms/{{ room.room_id }}
+            </code>
+            <p style="color: #0c5460; margin-top: 0.5rem; font-size: 0.875rem;">
+                Send JSON: {"status": "available", "base_price": 5000}
+            </p>
+        </div>
+
+        <div style="margin-top: 2rem;">
+            <button type="submit" class="btn btn-success">Save Changes</button>
+            <a href="/rooms" class="btn" style="margin-left: 1rem;">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <h2 style="margin-bottom: 1rem;">Status Information</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><span class="badge badge-success">Available</span></td>
+                <td>Room is ready for new bookings</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-warning">Occupied</span></td>
+                <td>Room is currently booked/occupied by a guest</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-danger">Maintenance</span></td>
+                <td>Room is under maintenance and cannot be booked</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}

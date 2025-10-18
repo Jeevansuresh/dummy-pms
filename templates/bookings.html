@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Bookings - Chennai BnB PMS{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1>Bookings Management</h1>
+    <a href="/new-booking" class="btn btn-success">+ New Booking</a>
+</div>
+
+<div class="card">
+    <h2 style="margin-bottom: 1.5rem;">All Bookings ({{ bookings|length }})</h2>
+
+    {% if bookings|length > 0 %}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Guest Name</th>
+                <th>Room</th>
+                <th>Check-in</th>
+                <th>Check-out</th>
+                <th>Total Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for booking in bookings %}
+            <tr>
+                <td><strong>#{{ booking.booking_id }}</strong></td>
+                <td>{{ booking.guest_name }}</td>
+                <td>{{ booking.room_number }}<br><small style="color: #666;">{{ booking.room_type }}</small></td>
+                <td>{{ booking.check_in }}</td>
+                <td>{{ booking.check_out }}</td>
+                <td><strong>₹{{ booking.total_price }}</strong></td>
+                <td>
+                    {% if booking.status == 'confirmed' %}
+                    <span class="badge badge-info">Confirmed</span>
+                    {% elif booking.status == 'checked_in' %}
+                    <span class="badge badge-success">Checked In</span>
+                    {% elif booking.status == 'checked_out' %}
+                    <span class="badge badge-warning">Checked Out</span>
+                    {% else %}
+                    <span class="badge badge-danger">Cancelled</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        {% if booking.status == 'confirmed' %}
+                        <a href="/bookings/update-status/{{ booking.booking_id }}/checked_in" class="btn btn-success btn-small">
+                            Check In
+                        </a>
+                        <a href="/bookings/update-status/{{ booking.booking_id }}/cancelled" class="btn btn-danger btn-small">
+                            Cancel
+                        </a>
+                        {% elif booking.status == 'checked_in' %}
+                        <a href="/bookings/update-status/{{ booking.booking_id }}/checked_out" class="btn btn-warning btn-small">
+                            Check Out
+                        </a>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align: center; padding: 3rem; color: #666;">
+        <h3>No bookings yet</h3>
+        <p>Create your first booking to get started</p>
+        <a href="/new-booking" class="btn btn-success" style="margin-top: 1rem;">Create Booking</a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2 style="margin-bottom: 1rem;">Booking Status Flow</h2>
+    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <div style="padding: 1rem; background: #d1ecf1; border-radius: 5px;">
+            <span class="badge badge-info">Confirmed</span>
+        </div>
+        <span style="font-size: 1.5rem;">→</span>
+        <div style="padding: 1rem; background: #d4edda; border-radius: 5px;">
+            <span class="badge badge-success">Checked In</span>
+        </div>
+        <span style="font-size: 1.5rem;">→</span>
+        <div style="padding: 1rem; background: #fff3cd; border-radius: 5px;">
+            <span class="badge badge-warning">Checked Out</span>
+        </div>
+    </div>
+    <p style="margin-top: 1rem; color: #666; font-style: italic;">
+        Note: Bookings can be cancelled from "Confirmed" status. Room status updates automatically based on booking status.
+    </p>
+</div>
+{% endblock %}

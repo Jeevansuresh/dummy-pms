@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}New Booking - Chennai BnB PMS{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 2rem;">Create New Booking</h1>
+
+<div class="card">
+    <form method="POST" action="/new-booking" id="bookingForm">
+        <h2 style="margin-bottom: 1.5rem;">Guest Information</h2>
+
+        <div class="form-group">
+            <label for="guest_name">Guest Name *</label>
+            <input type="text" id="guest_name" name="guest_name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="guest_email">Email *</label>
+            <input type="email" id="guest_email" name="guest_email" required>
+        </div>
+
+        <div class="form-group">
+            <label for="guest_phone">Phone Number *</label>
+            <input type="tel" id="guest_phone" name="guest_phone" required>
+        </div>
+
+        <div class="form-group">
+            <label for="id_proof">ID Proof Number</label>
+            <input type="text" id="id_proof" name="id_proof" placeholder="Aadhaar/PAN/Passport">
+        </div>
+
+        <h2 style="margin: 2rem 0 1.5rem;">Booking Details</h2>
+
+        <div class="form-group">
+            <label for="room_id">Select Room *</label>
+            <select id="room_id" name="room_id" required>
+                <option value="">Choose a room...</option>
+                {% for room in rooms %}
+                <option value="{{ room.room_id }}" data-price="{{ room.base_price }}">
+                    Room {{ room.room_number }} - {{ room.room_type }} (₹{{ room.base_price }}/night)
+                </option>
+                {% endfor %}
+            </select>
+            {% if rooms|length == 0 %}
+            <p style="color: #e74c3c; margin-top: 0.5rem;">
+                ⚠️ No rooms available. Please check room management or change dates.
+            </p>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="check_in">Check-in Date *</label>
+            <input type="date" id="check_in" name="check_in" required>
+        </div>
+
+        <div class="form-group">
+            <label for="check_out">Check-out Date *</label>
+            <input type="date" id="check_out" name="check_out" required>
+        </div>
+
+        <div id="priceCalculation" style="display: none; background: #f8f9fa; padding: 1rem; border-radius: 5px; margin-bottom: 1.5rem;">
+            <p style="margin: 0.5rem 0;"><strong>Number of nights:</strong> <span id="nights">0</span></p>
+            <p style="margin: 0.5rem 0; font-size: 1.25rem; color: #3498db;">
+                <strong>Total Price:</strong> ₹<span id="totalPrice">0</span>
+            </p>
+        </div>
+
+        <div style="margin-top: 2rem;">
+            <button type="submit" class="btn btn-success">Create Booking</button>
+            <a href="/bookings" class="btn" style="margin-left: 1rem;">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <h2 style="margin-bottom: 1rem;">Available Rooms ({{ rooms|length }})</h2>
+    {% if rooms|length > 0 %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+        {% for room in rooms %}
+        <div style="padding: 1rem; background: #f8f9fa; border-radius: 8px; text-align: center;">
+            <h3>{{ room.room_number }}</h3>
+            <p style="color: #666; margin: 0.5rem 0;">{{ room.room_type }}</p>
+            <p style="font-weight: bold; color: #3498db;">₹{{ room.base_price }}/night</p>
+            <span class="badge badge-success">Available</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="text-align: center; padding: 2rem; color: #666;">
+        No available rooms at the moment. Please check back later or contact management.
+    </p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('check_in').setAttribute('min', today);
+    document.getElementById('check_out').setAttribute('min', today);
+    document.getElementById('check_in').value = today;
+
+    document.getElementById('check_in').addEventListener('change', function() {
+        const checkIn = new Date(this.value);
+        checkIn.setDate(checkIn.getDate() + 1);
+        const minCheckOut = checkIn.toISOString().split('T')[0];
+        document.getElementById('check_out').setAttribute('min', minCheckOut);
+        calculatePrice();
+    });
+
+    document.getElementById('check_out').addEventListener('change', calculatePrice);
+    document.getElementById('room_id').addEventListener('change', calculatePrice);
+
+    function calculatePrice() {
+        const roomSelect = document.getElementById('room_id');
+        const checkIn = document.getElementById('check_in').value;
+        const checkOut = document.getElementById('check_out').value;
+
+        if (roomSelect.value && checkIn && checkOut) {
+            const price = parseInt(roomSelect.options[roomSelect.selectedIndex].dataset.price);
+            const checkInDate = new Date(checkIn);
+            const checkOutDate = new Date(checkOut);
+            const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+
+            if (nights > 0) {
+                const total = price * nights;
+                document.getElementById('nights').textContent = nights;
+                document.getElementById('totalPrice').textContent = total.toLocaleString();
+                document.getElementById('priceCalculation').style.display = 'block';
+            } else {
+                document.getElementById('priceCalculation').style.display = 'none';
+            }
+        }
+    }
+
+    document.getElementById('bookingForm').addEventListener('submit', function(e) {
+        const checkIn = new Date(document.getElementById('check_in').value);
+        const checkOut = new Date(document.getElementById('check_out').value);
+
+        if (checkOut <= checkIn) {
+            e.preventDefault();
+            alert('Check-out date must be after check-in date');
+        }
+    });
+</script>
+{% endblock %}
