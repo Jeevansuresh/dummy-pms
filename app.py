@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from datetime import datetime, timedelta
 import json
+import os
 
 app = Flask(__name__)
 
@@ -32,11 +33,11 @@ class Database:
                 'room_number': f'10{i}',
                 'room_type': room_info['type'],
                 'base_price': room_info['base_price'],
-                'status': 'available',  # available, occupied, maintenance
+                'status': 'available',
                 'floor': 1 if i <= 4 else 2,
                 'amenities': ['WiFi', 'AC', 'TV', 'Mini Fridge', 'Kitchenette'],
-                'current_guest_id': None,  # Track who's checked in
-                'current_booking_id': None  # Track active booking
+                'current_guest_id': None,
+                'current_booking_id': None
             })
         return rooms
 
@@ -50,18 +51,14 @@ class Database:
         return next((b for b in self.bookings if b['booking_id'] == booking_id), None)
 
     def get_room_with_guest_details(self, room_id):
-        """Get room with current guest information"""
         room = self.get_room(room_id)
         if not room:
             return None
 
         room_data = room.copy()
-
-        # Add current guest details if occupied
         if room['current_guest_id']:
             guest = self.get_guest(room['current_guest_id'])
             booking = self.get_booking(room['current_booking_id'])
-
             room_data['current_guest'] = {
                 'guest_id': guest['guest_id'],
                 'name': guest['name'],
@@ -77,17 +74,13 @@ class Database:
         return room_data
 
     def get_guest_with_booking_details(self, guest_id):
-        """Get guest with all their bookings and current room"""
         guest = self.get_guest(guest_id)
         if not guest:
             return None
 
         guest_data = guest.copy()
-
-        # Get all bookings for this guest
         guest_bookings = [b for b in self.bookings if b['guest_id'] == guest_id]
 
-        # Find current/active booking
         current_booking = next(
             (b for b in guest_bookings if b['status'] in ['confirmed', 'checked_in']),
             None
@@ -143,12 +136,10 @@ class Database:
     def _is_room_available(self, room_id, check_in, check_out):
         check_in_dt = datetime.strptime(check_in, '%Y-%m-%d')
         check_out_dt = datetime.strptime(check_out, '%Y-%m-%d')
-
         for booking in self.bookings:
             if booking['room_id'] == room_id and booking['status'] in ['confirmed', 'checked_in']:
                 booking_in = datetime.strptime(booking['check_in'], '%Y-%m-%d')
                 booking_out = datetime.strptime(booking['check_out'], '%Y-%m-%d')
-
                 if (check_in_dt < booking_out and check_out_dt > booking_in):
                     return False
         return True
@@ -168,24 +159,18 @@ class Database:
         }
         self.bookings.append(booking)
         self.booking_id_counter += 1
-
-        # Update room - mark as occupied and assign guest
         self.update_room_status(
             booking_data['room_id'], 
             'occupied',
             guest_id=booking_data['guest_id'],
             booking_id=booking['booking_id']
         )
-
         return booking
 
     def update_booking_status(self, booking_id, new_status):
         booking = self.get_booking(booking_id)
         if booking:
-            old_status = booking['status']
             booking['status'] = new_status
-
-            # Track timestamps
             if new_status == 'checked_in':
                 booking['checked_in_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 self.update_room_status(
@@ -194,9 +179,8 @@ class Database:
                     guest_id=booking['guest_id'],
                     booking_id=booking_id
                 )
-            elif new_status == 'checked_out':
+            elif new_status in ['checked_out', 'cancelled']:
                 booking['checked_out_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                # Check if there are other active bookings for this room
                 other_active = any(
                     b['room_id'] == booking['room_id'] and 
                     b['booking_id'] != booking_id and 
@@ -205,16 +189,6 @@ class Database:
                 )
                 if not other_active:
                     self.update_room_status(booking['room_id'], 'available')
-            elif new_status == 'cancelled':
-                other_active = any(
-                    b['room_id'] == booking['room_id'] and 
-                    b['booking_id'] != booking_id and 
-                    b['status'] in ['confirmed', 'checked_in']
-                    for b in self.bookings
-                )
-                if not other_active:
-                    self.update_room_status(booking['room_id'], 'available')
-
             return booking
         return None
 
@@ -232,7 +206,6 @@ class Database:
         return guest
 
     def get_checked_in_guests(self):
-        """Get all currently checked-in guests with room details"""
         checked_in = []
         for booking in self.bookings:
             if booking['status'] == 'checked_in':
@@ -270,8 +243,8 @@ HOTEL_INFO = {
     'check_out_time': '11:00'
 }
 
-# ============== WEB ROUTES ==============
-
+# (All your routes remain unchanged from the code you sent)
+# ...
 @app.route('/')
 def index():
     return render_template('index.html', hotel=HOTEL_INFO)
@@ -725,6 +698,6 @@ def api_occupancy():
             'check_outs_today': check_outs_today
         }
     })
-
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
