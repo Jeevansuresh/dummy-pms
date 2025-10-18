@@ -57,7 +57,6 @@ class Database:
 
         room_data = room.copy()
 
-        # Add current guest details if occupied
         if room['current_guest_id']:
             guest = self.get_guest(room['current_guest_id'])
             booking = self.get_booking(room['current_booking_id'])
@@ -84,10 +83,8 @@ class Database:
 
         guest_data = guest.copy()
 
-        # Get all bookings for this guest
         guest_bookings = [b for b in self.bookings if b['guest_id'] == guest_id]
 
-        # Find current/active booking
         current_booking = next(
             (b for b in guest_bookings if b['status'] in ['confirmed', 'checked_in']),
             None
@@ -169,7 +166,6 @@ class Database:
         self.bookings.append(booking)
         self.booking_id_counter += 1
 
-        # Update room - mark as occupied and assign guest
         self.update_room_status(
             booking_data['room_id'], 
             'occupied',
@@ -185,7 +181,6 @@ class Database:
             old_status = booking['status']
             booking['status'] = new_status
 
-            # Track timestamps
             if new_status == 'checked_in':
                 booking['checked_in_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 self.update_room_status(
@@ -196,7 +191,6 @@ class Database:
                 )
             elif new_status == 'checked_out':
                 booking['checked_out_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                # Check if there are other active bookings for this room
                 other_active = any(
                     b['room_id'] == booking['room_id'] and 
                     b['booking_id'] != booking_id and 
@@ -232,7 +226,6 @@ class Database:
         return guest
 
     def get_checked_in_guests(self):
-        """Get all currently checked-in guests with room details"""
         checked_in = []
         for booking in self.bookings:
             if booking['status'] == 'checked_in':
@@ -254,10 +247,8 @@ class Database:
                     })
         return checked_in
 
-# Initialize database
 db = Database()
 
-# Hotel Information
 HOTEL_INFO = {
     'name': 'Chennai BnB Serviced Apartments',
     'location': 'Chennai, Tamil Nadu, India',
@@ -270,8 +261,6 @@ HOTEL_INFO = {
     'check_out_time': '11:00'
 }
 
-# ============== WEB ROUTES ==============
-
 @app.route('/')
 def index():
     return render_template('index.html', hotel=HOTEL_INFO)
@@ -279,19 +268,14 @@ def index():
 @app.route('/dashboard')
 def dashboard():
     today = datetime.now().date()
-
     occupied_rooms = len([r for r in db.rooms if r['status'] == 'occupied'])
     available_rooms = len([r for r in db.rooms if r['status'] == 'available'])
     maintenance_rooms = len([r for r in db.rooms if r['status'] == 'maintenance'])
     occupancy_rate = (occupied_rooms / 8) * 100
-
     today_str = today.strftime('%Y-%m-%d')
     check_ins_today = [b for b in db.bookings if b['check_in'] == today_str and b['status'] == 'confirmed']
     check_outs_today = [b for b in db.bookings if b['check_out'] == today_str and b['status'] == 'checked_in']
-
-    # Get checked-in guests
     checked_in_guests = db.get_checked_in_guests()
-
     return render_template('dashboard.html', 
                          occupancy_rate=occupancy_rate,
                          total_rooms=8,
@@ -305,12 +289,10 @@ def dashboard():
 
 @app.route('/rooms')
 def rooms():
-    # Get rooms with guest details
     rooms_with_guests = []
     for room in db.rooms:
         room_data = db.get_room_with_guest_details(room['room_id'])
         rooms_with_guests.append(room_data)
-
     return render_template('rooms.html', rooms=rooms_with_guests, hotel=HOTEL_INFO)
 
 @app.route('/rooms/edit/<int:room_id>', methods=['GET', 'POST'])
@@ -318,22 +300,17 @@ def edit_room(room_id):
     room = db.get_room(room_id)
     if not room:
         return "Room not found", 404
-
     if request.method == 'POST':
         new_status = request.form.get('status')
         new_price = request.form.get('base_price')
-
         if new_status in ['available', 'occupied', 'maintenance']:
             room['status'] = new_status
-
         try:
             if new_price:
                 room['base_price'] = int(new_price)
         except:
             pass
-
         return redirect(url_for('rooms'))
-
     return render_template('edit_room.html', room=room, hotel=HOTEL_INFO)
 
 @app.route('/bookings')
@@ -348,7 +325,6 @@ def bookings():
             'room_type': room['room_type'] if room else 'N/A',
             'guest_name': guest['name'] if guest else 'N/A'
         })
-
     return render_template('bookings.html', bookings=enriched_bookings, hotel=HOTEL_INFO)
 
 @app.route('/bookings/update-status/<int:booking_id>/<status>')
@@ -367,15 +343,12 @@ def new_booking():
             'id_proof': request.form.get('id_proof', '')
         }
         guest = db.create_guest(guest_data)
-
         check_in = datetime.strptime(request.form['check_in'], '%Y-%m-%d')
         check_out = datetime.strptime(request.form['check_out'], '%Y-%m-%d')
         nights = (check_out - check_in).days
-
         room_id = int(request.form['room_id'])
         room = db.get_room(room_id)
         total_price = room['base_price'] * nights
-
         booking_data = {
             'room_id': room_id,
             'guest_id': guest['guest_id'],
@@ -384,7 +357,6 @@ def new_booking():
             'total_price': total_price
         }
         booking = db.create_booking(booking_data)
-
         return redirect(url_for('bookings'))
 
     available_rooms = [r for r in db.rooms if r['status'] == 'available']
@@ -392,19 +364,14 @@ def new_booking():
 
 @app.route('/guests')
 def guests_page():
-    # Get all guests with their booking details
     guests_with_details = []
     for guest in db.guests:
         guest_data = db.get_guest_with_booking_details(guest['guest_id'])
         guests_with_details.append(guest_data)
-
     return render_template('guests.html', guests=guests_with_details, hotel=HOTEL_INFO)
-
-# ============== API ENDPOINTS ==============
 
 @app.route('/api/hotel-info', methods=['GET'])
 def api_hotel_info():
-    """Get complete hotel information"""
     return jsonify({
         'success': True,
         'data': HOTEL_INFO
@@ -412,12 +379,10 @@ def api_hotel_info():
 
 @app.route('/api/rooms', methods=['GET'])
 def api_rooms():
-    """Get all rooms with current guest information"""
     rooms_with_guests = []
     for room in db.rooms:
         room_data = db.get_room_with_guest_details(room['room_id'])
         rooms_with_guests.append(room_data)
-
     return jsonify({
         'success': True,
         'data': rooms_with_guests
@@ -425,25 +390,20 @@ def api_rooms():
 
 @app.route('/api/rooms/<int:room_id>', methods=['GET', 'PUT'])
 def api_room_detail(room_id):
-    """Get or update specific room details with guest information"""
     room = db.get_room_with_guest_details(room_id)
-
     if not room:
         return jsonify({
             'success': False,
             'error': 'Room not found'
         }), 404
-
     if request.method == 'GET':
         return jsonify({
             'success': True,
             'data': room
         })
-
     if request.method == 'PUT':
         data = request.get_json()
         room_basic = db.get_room(room_id)
-
         if 'status' in data:
             if data['status'] not in ['available', 'occupied', 'maintenance']:
                 return jsonify({
@@ -451,7 +411,6 @@ def api_room_detail(room_id):
                     'error': 'Invalid status'
                 }), 400
             room_basic['status'] = data['status']
-
         if 'base_price' in data:
             try:
                 new_price = float(data['base_price'])
@@ -466,7 +425,6 @@ def api_room_detail(room_id):
                     'success': False,
                     'error': 'Invalid price format'
                 }), 400
-
         updated_room = db.get_room_with_guest_details(room_id)
         return jsonify({
             'success': True,
@@ -476,15 +434,12 @@ def api_room_detail(room_id):
 
 @app.route('/api/rooms/<int:room_id>/guest', methods=['GET'])
 def api_room_current_guest(room_id):
-    """Get current guest checked into a specific room"""
     room = db.get_room_with_guest_details(room_id)
-
     if not room:
         return jsonify({
             'success': False,
             'error': 'Room not found'
         }), 404
-
     if room['current_guest']:
         return jsonify({
             'success': True,
@@ -499,16 +454,13 @@ def api_room_current_guest(room_id):
 
 @app.route('/api/rooms/available', methods=['GET'])
 def api_available_rooms():
-    """Get available rooms for specific dates"""
     check_in = request.args.get('check_in')
     check_out = request.args.get('check_out')
-
     if not check_in or not check_out:
         return jsonify({
             'success': False,
             'error': 'check_in and check_out dates are required'
         }), 400
-
     try:
         available = db.get_available_rooms(check_in, check_out)
         return jsonify({
@@ -523,7 +475,6 @@ def api_available_rooms():
 
 @app.route('/api/bookings', methods=['GET', 'POST'])
 def api_bookings():
-    """Get all bookings or create a new booking"""
     if request.method == 'GET':
         enriched_bookings = []
         for booking in db.bookings:
@@ -537,35 +488,29 @@ def api_bookings():
                 'guest_email': guest['email'] if guest else 'N/A',
                 'guest_phone': guest['phone'] if guest else 'N/A'
             })
-
         return jsonify({
             'success': True,
             'data': enriched_bookings
         })
-
     if request.method == 'POST':
         data = request.get_json()
-
         required = ['room_id', 'guest_name', 'guest_email', 'guest_phone', 'check_in', 'check_out']
         if not all(field in data for field in required):
             return jsonify({
                 'success': False,
                 'error': 'Missing required fields'
             }), 400
-
         room = db.get_room(data['room_id'])
         if not room:
             return jsonify({
                 'success': False,
                 'error': 'Room not found'
             }), 404
-
         if not db._is_room_available(data['room_id'], data['check_in'], data['check_out']):
             return jsonify({
                 'success': False,
                 'error': 'Room not available'
             }), 400
-
         guest_data = {
             'name': data['guest_name'],
             'email': data['guest_email'],
@@ -573,25 +518,21 @@ def api_bookings():
             'id_proof': data.get('id_proof', '')
         }
         guest = db.create_guest(guest_data)
-
         try:
             check_in = datetime.strptime(data['check_in'], '%Y-%m-%d')
             check_out = datetime.strptime(data['check_out'], '%Y-%m-%d')
             nights = (check_out - check_in).days
-
             if nights <= 0:
                 return jsonify({
                     'success': False,
                     'error': 'Check-out must be after check-in'
                 }), 400
-
             total_price = room['base_price'] * nights
         except ValueError:
             return jsonify({
                 'success': False,
                 'error': 'Invalid date format'
             }), 400
-
         booking_data = {
             'room_id': data['room_id'],
             'guest_id': guest['guest_id'],
@@ -600,7 +541,6 @@ def api_bookings():
             'total_price': total_price
         }
         booking = db.create_booking(booking_data)
-
         return jsonify({
             'success': True,
             'data': booking
@@ -608,19 +548,15 @@ def api_bookings():
 
 @app.route('/api/bookings/<int:booking_id>', methods=['GET', 'PUT', 'DELETE'])
 def api_booking_detail(booking_id):
-    """Get, update, or cancel booking with full details"""
     booking = db.get_booking(booking_id)
-
     if not booking:
         return jsonify({
             'success': False,
             'error': 'Booking not found'
         }), 404
-
     if request.method == 'GET':
         room = db.get_room(booking['room_id'])
         guest = db.get_guest(booking['guest_id'])
-
         enriched_booking = {
             **booking,
             'room_number': room['room_number'] if room else 'N/A',
@@ -629,12 +565,10 @@ def api_booking_detail(booking_id):
             'guest_email': guest['email'] if guest else 'N/A',
             'guest_phone': guest['phone'] if guest else 'N/A'
         }
-
         return jsonify({
             'success': True,
             'data': enriched_booking
         })
-
     if request.method == 'PUT':
         data = request.get_json()
         if 'status' in data:
@@ -643,19 +577,15 @@ def api_booking_detail(booking_id):
                     'success': False,
                     'error': 'Invalid status'
                 }), 400
-
             updated_booking = db.update_booking_status(booking_id, data['status'])
-
             return jsonify({
                 'success': True,
                 'data': updated_booking
             })
-
         return jsonify({
             'success': False,
             'error': 'No valid fields to update'
         }), 400
-
     if request.method == 'DELETE':
         db.update_booking_status(booking_id, 'cancelled')
         return jsonify({
@@ -665,12 +595,10 @@ def api_booking_detail(booking_id):
 
 @app.route('/api/guests', methods=['GET'])
 def api_guests():
-    """Get all guests with their booking details"""
     guests_with_details = []
     for guest in db.guests:
         guest_data = db.get_guest_with_booking_details(guest['guest_id'])
         guests_with_details.append(guest_data)
-
     return jsonify({
         'success': True,
         'data': guests_with_details
@@ -678,15 +606,12 @@ def api_guests():
 
 @app.route('/api/guests/<int:guest_id>', methods=['GET'])
 def api_guest_detail(guest_id):
-    """Get specific guest with all bookings and current room"""
     guest_data = db.get_guest_with_booking_details(guest_id)
-
     if not guest_data:
         return jsonify({
             'success': False,
             'error': 'Guest not found'
         }), 404
-
     return jsonify({
         'success': True,
         'data': guest_data
@@ -694,9 +619,7 @@ def api_guest_detail(guest_id):
 
 @app.route('/api/guests/checked-in', methods=['GET'])
 def api_checked_in_guests():
-    """Get all currently checked-in guests with room details"""
     checked_in = db.get_checked_in_guests()
-
     return jsonify({
         'success': True,
         'data': checked_in
@@ -704,15 +627,12 @@ def api_checked_in_guests():
 
 @app.route('/api/occupancy', methods=['GET'])
 def api_occupancy():
-    """Get current occupancy statistics"""
     occupied = len([r for r in db.rooms if r['status'] == 'occupied'])
     available = len([r for r in db.rooms if r['status'] == 'available'])
     maintenance = len([r for r in db.rooms if r['status'] == 'maintenance'])
-
     today = datetime.now().date().strftime('%Y-%m-%d')
     check_ins_today = len([b for b in db.bookings if b['check_in'] == today and b['status'] == 'confirmed'])
     check_outs_today = len([b for b in db.bookings if b['check_out'] == today and b['status'] == 'checked_in'])
-
     return jsonify({
         'success': True,
         'data': {
@@ -726,5 +646,4 @@ def api_occupancy():
         }
     })
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=8080)
+# --- DO NOT add any app.run() section below ---
