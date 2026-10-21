@@ -1,54 +1,134 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
 from datetime import datetime, timedelta
+from functools import wraps
 import json
 import os
+import mysql.connector
+
+try:
+    # local, git-ignored credentials (see db_config.example.py)
+    from db_config import DB_PASSWORD as _LOCAL_DB_PASSWORD
+except ImportError:
+    _LOCAL_DB_PASSWORD = ''
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'dummy-pms-dev-secret-key-change-me')
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
-# In-memory database (for demonstration - in production, use a real database)
+if os.environ.get('FLASK_ENV') != 'development':
+    app.config['SESSION_COOKIE_SECURE'] = True
+
+# MySQL-backed Database
 class Database:
     def __init__(self):
-        self.rooms = self._initialize_rooms()
-        self.bookings = []
-        self.guests = []
-        self.booking_id_counter = 1
-        self.guest_id_counter = 1
+        self.config = {
+            'host': os.environ.get('DB_HOST', 'localhost'),
+            'user': os.environ.get('DB_USER', 'root'),
+            'password': os.environ.get('DB_PASSWORD', _LOCAL_DB_PASSWORD),
+            'database': os.environ.get('DB_NAME', 'dummy_pms')
+        }
 
-    def _initialize_rooms(self):
-        room_types = [
-            {'type': 'Deluxe', 'base_price': 3500},
-            {'type': 'Deluxe', 'base_price': 3500},
-            {'type': 'Premium', 'base_price': 4500},
-            {'type': 'Premium', 'base_price': 4500},
-            {'type': 'Suite', 'base_price': 6000},
-            {'type': 'Suite', 'base_price': 6000},
-            {'type': 'Executive Suite', 'base_price': 7500},
-            {'type': 'Executive Suite', 'base_price': 7500}
-        ]
+    def _get_connection(self):
+        return mysql.connector.connect(**self.config)
 
-        rooms = []
-        for i, room_info in enumerate(room_types, 1):
-            rooms.append({
-                'room_id': i,
-                'room_number': f'10{i}',
-                'room_type': room_info['type'],
-                'base_price': room_info['base_price'],
-                'status': 'available',
-                'floor': 1 if i <= 4 else 2,
-                'amenities': ['WiFi', 'AC', 'TV', 'Mini Fridge', 'Kitchenette'],
-                'current_guest_id': None,
-                'current_booking_id': None
-            })
-        return rooms
+    @property
+    def rooms(self):
+        conn = self._get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM rooms")
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        for r in rows:
+            if isinstance(r.get('base_price'), (int, float, str)):
+                r['base_price'] = float(r['base_price'])
+            if isinstance(r.get('amenities'), str):
+                r['amenities'] = [a.strip() for a in r['amenities'].split(',') if a.strip()]
+        return rows
+
+    @property
+    def bookings(self):
+        conn = self._get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM bookings")
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        for b in rows:
+            if b.get('check_in'):
+                b['check_in'] = str(b['check_in'])
+            if b.get('check_out'):
+                b['check_out'] = str(b['check_out'])
+            if b.get('created_at'):
+                b['created_at'] = str(b['created_at'])
+            if b.get('checked_in_at'):
+                b['checked_in_at'] = str(b['checked_in_at'])
+            if b.get('checked_out_at'):
+                b['checked_out_at'] = str(b['checked_out_at'])
+            if b.get('total_price') is not None:
+                b['total_price'] = float(b['total_price'])
+        return rows
+
+    @property
+    def guests(self):
+        conn = self._get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM guests")
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        for g in rows:
+            if g.get('created_at'):
+                g['created_at'] = str(g['created_at'])
+        return rows
 
     def get_room(self, room_id):
-        return next((r for r in self.rooms if r['room_id'] == room_id), None)
+        conn = self._get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM rooms WHERE room_id = %s", (room_id,))
+        room = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if room:
+            room['base_price'] = float(room['base_price'])
+            if isinstance(room.get('amenities'), str):
+                room['amenities'] = [a.strip() for a in room['amenities'].split(',') if a.strip()]
+        return room
 
     def get_guest(self, guest_id):
-        return next((g for g in self.guests if g['guest_id'] == guest_id), None)
+        conn = self._get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM guests WHERE guest_id = %s", (guest_id,))
+        guest = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if guest and guest.get('created_at'):
+            guest['created_at'] = str(guest['created_at'])
+        return guest
 
     def get_booking(self, booking_id):
-        return next((b for b in self.bookings if b['booking_id'] == booking_id), None)
+        conn = self._get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM bookings WHERE booking_id = %s", (booking_id,))
+        booking = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if booking:
+            if booking.get('check_in'):
+                booking['check_in'] = str(booking['check_in'])
+            if booking.get('check_out'):
+                booking['check_out'] = str(booking['check_out'])
+            if booking.get('created_at'):
+                booking['created_at'] = str(booking['created_at'])
+            if booking.get('checked_in_at'):
+                booking['checked_in_at'] = str(booking['checked_in_at'])
+            if booking.get('checked_out_at'):
+                booking['checked_out_at'] = str(booking['checked_out_at'])
+            if booking.get('total_price') is not None:
+                booking['total_price'] = float(booking['total_price'])
+        return booking
 
     def get_room_with_guest_details(self, room_id):
         room = self.get_room(room_id)
@@ -111,20 +191,25 @@ class Database:
         return guest_data
 
     def update_room_status(self, room_id, status, guest_id=None, booking_id=None):
-        room = self.get_room(room_id)
-        if room:
-            room['status'] = status
-            room['current_guest_id'] = guest_id
-            room['current_booking_id'] = booking_id
-            return room
-        return None
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE rooms SET status = %s, current_guest_id = %s, current_booking_id = %s WHERE room_id = %s",
+            (status, guest_id, booking_id, room_id)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return self.get_room(room_id)
 
     def update_room_price(self, room_id, new_price):
-        room = self.get_room(room_id)
-        if room:
-            room['base_price'] = new_price
-            return room
-        return None
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE rooms SET base_price = %s WHERE room_id = %s", (new_price, room_id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return self.get_room(room_id)
 
     def get_available_rooms(self, check_in, check_out):
         available = []
@@ -134,76 +219,109 @@ class Database:
         return available
 
     def _is_room_available(self, room_id, check_in, check_out):
-        check_in_dt = datetime.strptime(check_in, '%Y-%m-%d')
-        check_out_dt = datetime.strptime(check_out, '%Y-%m-%d')
+        check_in_dt = datetime.strptime(str(check_in), '%Y-%m-%d')
+        check_out_dt = datetime.strptime(str(check_out), '%Y-%m-%d')
         for booking in self.bookings:
             if booking['room_id'] == room_id and booking['status'] in ['confirmed', 'checked_in']:
-                booking_in = datetime.strptime(booking['check_in'], '%Y-%m-%d')
-                booking_out = datetime.strptime(booking['check_out'], '%Y-%m-%d')
+                booking_in = datetime.strptime(str(booking['check_in']), '%Y-%m-%d')
+                booking_out = datetime.strptime(str(booking['check_out']), '%Y-%m-%d')
                 if (check_in_dt < booking_out and check_out_dt > booking_in):
                     return False
         return True
 
     def create_booking(self, booking_data):
-        booking = {
-            'booking_id': self.booking_id_counter,
-            'room_id': booking_data['room_id'],
-            'guest_id': booking_data['guest_id'],
-            'check_in': booking_data['check_in'],
-            'check_out': booking_data['check_out'],
-            'total_price': booking_data['total_price'],
-            'status': 'confirmed',
-            'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'checked_in_at': None,
-            'checked_out_at': None
-        }
-        self.bookings.append(booking)
-        self.booking_id_counter += 1
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            cursor.execute(
+                """INSERT INTO bookings (room_id, guest_id, check_in, check_out, total_price, status, created_at)
+                   VALUES (%s, %s, %s, %s, %s, 'confirmed', %s)""",
+                (booking_data['room_id'], booking_data['guest_id'], booking_data['check_in'],
+                 booking_data['check_out'], booking_data['total_price'], now_str)
+            )
+            booking_id = cursor.lastrowid
+            conn.commit()
+        finally:
+            cursor.close()
+            conn.close()
+
         self.update_room_status(
-            booking_data['room_id'], 
+            booking_data['room_id'],
             'occupied',
             guest_id=booking_data['guest_id'],
-            booking_id=booking['booking_id']
+            booking_id=booking_id
         )
-        return booking
+        return self.get_booking(booking_id)
 
     def update_booking_status(self, booking_id, new_status):
         booking = self.get_booking(booking_id)
-        if booking:
-            booking['status'] = new_status
-            if new_status == 'checked_in':
-                booking['checked_in_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                self.update_room_status(
-                    booking['room_id'], 
-                    'occupied',
-                    guest_id=booking['guest_id'],
-                    booking_id=booking_id
-                )
-            elif new_status in ['checked_out', 'cancelled']:
-                booking['checked_out_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                other_active = any(
-                    b['room_id'] == booking['room_id'] and 
-                    b['booking_id'] != booking_id and 
-                    b['status'] in ['confirmed', 'checked_in']
-                    for b in self.bookings
-                )
-                if not other_active:
-                    self.update_room_status(booking['room_id'], 'available')
-            return booking
-        return None
+        if not booking:
+            return None
+
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        if new_status == 'checked_in':
+            cursor.execute(
+                "UPDATE bookings SET status = %s, checked_in_at = %s WHERE booking_id = %s",
+                (new_status, now_str, booking_id)
+            )
+            conn.commit()
+            cursor.close()
+            conn.close()
+            self.update_room_status(
+                booking['room_id'],
+                'occupied',
+                guest_id=booking['guest_id'],
+                booking_id=booking_id
+            )
+        elif new_status in ['checked_out', 'cancelled']:
+            cursor.execute(
+                "UPDATE bookings SET status = %s, checked_out_at = %s WHERE booking_id = %s",
+                (new_status, now_str, booking_id)
+            )
+            conn.commit()
+            cursor.close()
+            conn.close()
+
+            all_bookings = self.bookings
+            other_active = any(
+                b['room_id'] == booking['room_id'] and
+                b['booking_id'] != booking_id and
+                b['status'] in ['confirmed', 'checked_in']
+                for b in all_bookings
+            )
+            if not other_active:
+                self.update_room_status(booking['room_id'], 'available')
+        else:
+            cursor.execute("UPDATE bookings SET status = %s WHERE booking_id = %s", (new_status, booking_id))
+            conn.commit()
+            cursor.close()
+            conn.close()
+
+        return self.get_booking(booking_id)
 
     def create_guest(self, guest_data):
-        guest = {
-            'guest_id': self.guest_id_counter,
-            'name': guest_data['name'],
-            'email': guest_data['email'],
-            'phone': guest_data['phone'],
-            'id_proof': guest_data.get('id_proof', ''),
-            'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        }
-        self.guests.append(guest)
-        self.guest_id_counter += 1
-        return guest
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        try:
+            now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            cursor.execute(
+                """INSERT INTO guests (name, email, phone, id_proof, created_at)
+                   VALUES (%s, %s, %s, %s, %s)""",
+                (guest_data['name'], guest_data['email'], guest_data['phone'],
+                 guest_data.get('id_proof', ''), now_str)
+            )
+            guest_id = cursor.lastrowid
+            conn.commit()
+        finally:
+            # always release the connection, even if the INSERT failed,
+            # otherwise the open transaction keeps locks held
+            cursor.close()
+            conn.close()
+        return self.get_guest(guest_id)
 
     def get_checked_in_guests(self):
         checked_in = []
@@ -227,6 +345,135 @@ class Database:
                     })
         return checked_in
 
+
+USERS = {
+    'manager': {
+        'password': 'manager123',
+        'role': 'manager',
+        'name': 'Hotel Manager'
+    },
+    'reception': {
+        'password': 'reception123',
+        'role': 'reception',
+        'name': 'Front Desk Receptionist'
+    },
+    'auditor': {
+        'password': 'auditor123',
+        'role': 'auditor',
+        'name': 'Security Auditor'
+    }
+}
+
+FAILED_LOGIN_TRACKER = {}
+MAX_FAILED_ATTEMPTS = 5
+LOCKOUT_MINUTES = 2
+
+
+def _get_client_ip():
+    forwarded_for = request.headers.get('X-Forwarded-For', '')
+    if forwarded_for:
+        return forwarded_for.split(',')[0].strip()
+    return request.remote_addr or 'unknown'
+
+
+def _is_login_locked(username, client_ip):
+    key = f'{username}:{client_ip}'
+    record = FAILED_LOGIN_TRACKER.get(key)
+
+    if not record:
+        return False, 0
+
+    lock_until = record.get('lock_until')
+    if lock_until and datetime.now() < lock_until:
+        remaining_seconds = int((lock_until - datetime.now()).total_seconds())
+        return True, max(remaining_seconds, 1)
+
+    if lock_until and datetime.now() >= lock_until:
+        FAILED_LOGIN_TRACKER.pop(key, None)
+
+    return False, 0
+
+
+def _record_failed_login(username, client_ip):
+    key = f'{username}:{client_ip}'
+    record = FAILED_LOGIN_TRACKER.get(key, {'count': 0, 'lock_until': None})
+    record['count'] += 1
+
+    if record['count'] >= MAX_FAILED_ATTEMPTS:
+        record['lock_until'] = datetime.now() + timedelta(minutes=LOCKOUT_MINUTES)
+
+    FAILED_LOGIN_TRACKER[key] = record
+    return record
+
+
+def _clear_failed_logins(username, client_ip):
+    key = f'{username}:{client_ip}'
+    FAILED_LOGIN_TRACKER.pop(key, None)
+
+
+def get_current_user():
+    username = session.get('username')
+    role = session.get('role')
+    name = session.get('display_name')
+
+    if username and role:
+        return {
+            'username': username,
+            'role': role,
+            'name': name or username
+        }
+
+    return None
+
+
+@app.context_processor
+def inject_template_globals():
+    return {
+        'current_user': get_current_user()
+    }
+
+
+def login_required(view_func):
+    @wraps(view_func)
+    def wrapped_view(*args, **kwargs):
+        if not get_current_user():
+            if request.path.startswith('/api/'):
+                return jsonify({'success': False, 'error': 'Authentication required'}), 401
+            return redirect(url_for('login', next=request.path))
+        return view_func(*args, **kwargs)
+    return wrapped_view
+
+
+def roles_required(*allowed_roles):
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapped_view(*args, **kwargs):
+            user = get_current_user()
+            if not user:
+                if request.path.startswith('/api/'):
+                    return jsonify({'success': False, 'error': 'Authentication required'}), 401
+                return redirect(url_for('login', next=request.path))
+
+            if user['role'] not in allowed_roles:
+                if request.path.startswith('/api/'):
+                    return jsonify({'success': False, 'error': 'Forbidden: insufficient role'}), 403
+                flash('You do not have permission to access that page.', 'error')
+                return redirect(url_for('dashboard'))
+
+            return view_func(*args, **kwargs)
+        return wrapped_view
+    return decorator
+
+
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Cache-Control'] = 'no-store'
+    response.headers['Content-Security-Policy'] = "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'"
+    return response
+
 # Initialize database
 db = Database()
 
@@ -243,13 +490,49 @@ HOTEL_INFO = {
     'check_out_time': '11:00'
 }
 
-# (All your routes remain unchanged from the code you sent)
-# ...
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if get_current_user():
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        username = (request.form.get('username') or '').strip().lower()
+        password = request.form.get('password') or ''
+
+        user = USERS.get(username)
+        if not user or user['password'] != password:
+            flash('Invalid credentials.', 'error')
+            return render_template('login.html', hotel=HOTEL_INFO, username=username), 401
+
+        session.clear()
+        session.permanent = True
+        session['username'] = username
+        session['role'] = user['role']
+        session['display_name'] = user['name']
+
+        next_path = request.args.get('next')
+        if next_path and next_path.startswith('/'):
+            return redirect(next_path)
+        return redirect(url_for('dashboard'))
+
+    return render_template('login.html', hotel=HOTEL_INFO)
+
+
+@app.route('/logout', methods=['GET'])
+def logout():
+    session.clear()
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('login'))
+
+
 @app.route('/')
 def index():
     return render_template('index.html', hotel=HOTEL_INFO)
 
+
 @app.route('/dashboard')
+@login_required
 def dashboard():
     today = datetime.now().date()
 
@@ -277,6 +560,7 @@ def dashboard():
                          hotel=HOTEL_INFO)
 
 @app.route('/rooms')
+@login_required
 def rooms():
     # Get rooms with guest details
     rooms_with_guests = []
@@ -296,20 +580,33 @@ def edit_room(room_id):
         new_status = request.form.get('status')
         new_price = request.form.get('base_price')
 
-        if new_status in ['available', 'occupied', 'maintenance']:
-            room['status'] = new_status
+        # Validate and persist the price to the database
+        if new_price not in (None, ''):
+            try:
+                price_val = float(new_price)
+            except (TypeError, ValueError):
+                flash('Invalid price format.', 'error')
+                return render_template('edit_room.html', room=room, hotel=HOTEL_INFO), 400
+            if price_val <= 0:
+                flash('Price must be greater than 0.', 'error')
+                return render_template('edit_room.html', room=room, hotel=HOTEL_INFO), 400
+            db.update_room_price(room_id, price_val)
 
-        try:
-            if new_price:
-                room['base_price'] = int(new_price)
-        except:
-            pass
+        # Validate and persist the status, preserving current occupant linkage
+        if new_status in ['available', 'occupied', 'maintenance']:
+            db.update_room_status(
+                room_id,
+                new_status,
+                guest_id=room.get('current_guest_id'),
+                booking_id=room.get('current_booking_id')
+            )
 
         return redirect(url_for('rooms'))
 
     return render_template('edit_room.html', room=room, hotel=HOTEL_INFO)
 
 @app.route('/bookings')
+@login_required
 def bookings():
     enriched_bookings = []
     for booking in db.bookings:
@@ -333,30 +630,53 @@ def update_booking_status_route(booking_id, status):
 @app.route('/new-booking', methods=['GET', 'POST'])
 def new_booking():
     if request.method == 'POST':
-        guest_data = {
+        def _reject(message):
+            flash(message, 'error')
+            available_rooms = [r for r in db.rooms if r['status'] == 'available']
+            return render_template('new_booking.html', rooms=available_rooms, hotel=HOTEL_INFO), 400
+
+        # Validate required fields are present and non-empty
+        required = ['guest_name', 'guest_email', 'guest_phone', 'room_id', 'check_in', 'check_out']
+        if any(not (request.form.get(f) or '').strip() for f in required):
+            return _reject('All fields are required.')
+
+        # Validate date format
+        try:
+            check_in = datetime.strptime(request.form['check_in'], '%Y-%m-%d')
+            check_out = datetime.strptime(request.form['check_out'], '%Y-%m-%d')
+        except ValueError:
+            return _reject('Invalid date format.')
+
+        # Validate date ordering
+        nights = (check_out - check_in).days
+        if nights <= 0:
+            return _reject('Check-out must be after check-in.')
+
+        # Validate room exists and is available for the dates
+        try:
+            room_id = int(request.form['room_id'])
+        except ValueError:
+            return _reject('Invalid room selection.')
+        room = db.get_room(room_id)
+        if not room:
+            return _reject('Selected room does not exist.')
+        if not db._is_room_available(room_id, request.form['check_in'], request.form['check_out']):
+            return _reject('Room is not available for the selected dates.')
+
+        # All valid — create the guest and booking
+        guest = db.create_guest({
             'name': request.form['guest_name'],
             'email': request.form['guest_email'],
             'phone': request.form['guest_phone'],
             'id_proof': request.form.get('id_proof', '')
-        }
-        guest = db.create_guest(guest_data)
-
-        check_in = datetime.strptime(request.form['check_in'], '%Y-%m-%d')
-        check_out = datetime.strptime(request.form['check_out'], '%Y-%m-%d')
-        nights = (check_out - check_in).days
-
-        room_id = int(request.form['room_id'])
-        room = db.get_room(room_id)
-        total_price = room['base_price'] * nights
-
-        booking_data = {
+        })
+        db.create_booking({
             'room_id': room_id,
             'guest_id': guest['guest_id'],
             'check_in': request.form['check_in'],
             'check_out': request.form['check_out'],
-            'total_price': total_price
-        }
-        booking = db.create_booking(booking_data)
+            'total_price': room['base_price'] * nights
+        })
 
         return redirect(url_for('bookings'))
 
@@ -398,6 +718,7 @@ def api_rooms():
 
 @app.route('/api/rooms/<int:room_id>', methods=['GET', 'PUT'])
 def api_room_detail(room_id):
+
     """Get or update specific room details with guest information"""
     room = db.get_room_with_guest_details(room_id)
 
@@ -448,6 +769,7 @@ def api_room_detail(room_id):
         })
 
 @app.route('/api/rooms/<int:room_id>/guest', methods=['GET'])
+@roles_required('manager', 'reception', 'auditor')
 def api_room_current_guest(room_id):
     """Get current guest checked into a specific room"""
     room = db.get_room_with_guest_details(room_id)
@@ -471,6 +793,7 @@ def api_room_current_guest(room_id):
         })
 
 @app.route('/api/rooms/available', methods=['GET'])
+@roles_required('manager', 'reception', 'auditor')
 def api_available_rooms():
     """Get available rooms for specific dates"""
     check_in = request.args.get('check_in')
@@ -496,6 +819,7 @@ def api_available_rooms():
 
 @app.route('/api/bookings', methods=['GET', 'POST'])
 def api_bookings():
+
     """Get all bookings or create a new booking"""
     if request.method == 'GET':
         enriched_bookings = []
@@ -580,6 +904,7 @@ def api_bookings():
         }), 201
 
 @app.route('/api/bookings/<int:booking_id>', methods=['GET', 'PUT', 'DELETE'])
+@roles_required('manager', 'reception')
 def api_booking_detail(booking_id):
     """Get, update, or cancel booking with full details"""
     booking = db.get_booking(booking_id)
@@ -637,6 +962,7 @@ def api_booking_detail(booking_id):
         })
 
 @app.route('/api/guests', methods=['GET'])
+@roles_required('manager', 'reception', 'auditor')
 def api_guests():
     """Get all guests with their booking details"""
     guests_with_details = []
@@ -650,6 +976,7 @@ def api_guests():
     })
 
 @app.route('/api/guests/<int:guest_id>', methods=['GET'])
+@roles_required('manager', 'reception', 'auditor')
 def api_guest_detail(guest_id):
     """Get specific guest with all bookings and current room"""
     guest_data = db.get_guest_with_booking_details(guest_id)
@@ -666,6 +993,7 @@ def api_guest_detail(guest_id):
     })
 
 @app.route('/api/guests/checked-in', methods=['GET'])
+@roles_required('manager', 'reception', 'auditor')
 def api_checked_in_guests():
     """Get all currently checked-in guests with room details"""
     checked_in = db.get_checked_in_guests()
@@ -676,6 +1004,7 @@ def api_checked_in_guests():
     })
 
 @app.route('/api/occupancy', methods=['GET'])
+@roles_required('manager', 'reception', 'auditor')
 def api_occupancy():
     """Get current occupancy statistics"""
     occupied = len([r for r in db.rooms if r['status'] == 'occupied'])
@@ -698,6 +1027,8 @@ def api_occupancy():
             'check_outs_today': check_outs_today
         }
     })
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+

@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local database credentials - never commit real passwords
+db_config.py
+
+# Test run noise (regenerated on every run)
+test_evidence/server.log

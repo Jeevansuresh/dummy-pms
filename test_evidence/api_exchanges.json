@@ -1,0 +1,613 @@
+{
+  "E2E-02": {
+    "exchanges": [
+      {
+        "method": "GET",
+        "url": "/dashboard",
+        "request_body": null,
+        "status": 302,
+        "reason": "FOUND",
+        "response_body": "[HTML page: Redirecting...]"
+      }
+    ],
+    "outcome": "PASSED",
+    "purpose": "E2E-02: Requesting /dashboard without a session redirects to the login page.",
+    "assertions": [
+      "assert resp.status_code in (301, 302)",
+      "assert \"/login\" in resp.headers.get(\"Location\", \"\")"
+    ]
+  },
+  "E2E-06": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/api/bookings",
+        "request_body": "{\n  \"room_id\": 1,\n  \"guest_name\": \"Test Guest\",\n  \"guest_email\": \"test.guest@example.com\",\n  \"guest_phone\": \"9876543210\",\n  \"check_in\": \"2026-10-22\",\n  \"check_out\": \"2026-10-24\"\n}",
+        "status": 201,
+        "reason": "CREATED",
+        "response_body": "{\n  \"data\": {\n    \"booking_id\": 1,\n    \"check_in\": \"2026-10-22\",\n    \"check_out\": \"2026-10-24\",\n    \"checked_in_at\": null,\n    \"checked_out_at\": null,\n    \"created_at\": \"2026-10-21 20:40:45\",\n    \"guest_id\": 1,\n    \"room_id\": 1,\n    \"status\": \"confirmed\",\n    \"total_price\": 7000.0\n  },\n  \"success\": true\n}"
+      }
+    ],
+    "outcome": "PASSED",
+    "purpose": "E2E-06: A valid POST /api/bookings creates a confirmed booking.",
+    "assertions": [
+      "assert resp.status_code == 201, resp.text",
+      "assert body[\"success\"] is True",
+      "assert booking[\"booking_id\"] > 0",
+      "assert booking[\"status\"] == \"confirmed\"",
+      "assert booking[\"room_id\"] == 1",
+      "assert float(booking[\"total_price\"]) == 7000.00"
+    ]
+  },
+  "E2E-07": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/api/bookings",
+        "request_body": "{\n  \"room_id\": 5,\n  \"guest_name\": \"Test Guest\",\n  \"guest_email\": \"test.guest@example.com\",\n  \"guest_phone\": \"9876543210\",\n  \"check_in\": \"2026-10-22\",\n  \"check_out\": \"2026-10-24\"\n}",
+        "status": 201,
+        "reason": "CREATED",
+        "response_body": "{\n  \"data\": {\n    \"booking_id\": 1,\n    \"check_in\": \"2026-10-22\",\n    \"check_out\": \"2026-10-24\",\n    \"checked_in_at\": null,\n    \"checked_out_at\": null,\n    \"created_at\": \"2026-10-21 20:40:45\",\n    \"guest_id\": 1,\n    \"room_id\": 5,\n    \"status\": \"confirmed\",\n    \"total_price\": 12000.0\n  },\n  \"success\": true\n}"
+      },
+      {
+        "method": "PUT",
+        "url": "/api/bookings/1",
+        "request_body": "{\n  \"status\": \"checked_in\"\n}",
+        "status": 200,
+        "reason": "OK",
+        "response_body": "{\n  \"data\": {\n    \"booking_id\": 1,\n    \"check_in\": \"2026-10-22\",\n    \"check_out\": \"2026-10-24\",\n    \"checked_in_at\": \"2026-10-21 20:40:45\",\n    \"checked_out_at\": null,\n    \"created_at\": \"2026-10-21 20:40:45\",\n    \"guest_id\": 1,\n    \"room_id\": 5,\n    \"status\": \"checked_in\",\n    \"total_price\": 12000.0\n  },\n  \"success\": true\n}"
+      },
+      {
+        "method": "GET",
+        "url": "/api/guests/checked-in",
+        "request_body": null,
+        "status": 200,
+        "reason": "OK",
+        "response_body": "{\n  \"data\": [\n    {\n      \"booking_id\": 1,\n      \"check_in\": \"2026-10-22\",\n      \"check_out\": \"2026-10-24\",\n      \"checked_in_at\": \"2026-10-21 20:40:45\",\n      \"guest_email\": \"test.guest@example.com\",\n      \"guest_id\": 1,\n      \"guest_name\": \"Test Guest\",\n      \"guest_phone\": \"9876543210\",\n      \"room_id\": 5,\n      \"room_number\": \"105\",\n      \"room_type\": \"Suite\"\n    }\n  ],\n  \"success\": true\n}"
+      }
+    ],
+    "outcome": "PASSED",
+    "purpose": "E2E-07: A checked-in booking appears in the checked-in guests report.",
+    "assertions": [
+      "assert resp.status_code == 200",
+      "assert any(r[\"booking_id\"] == bid for r in rows), \"checked-in guest missing from report\"",
+      "assert row[\"room_number\"] == \"105\"",
+      "assert row[\"guest_name\"] == \"Test Guest\""
+    ]
+  },
+  "E2E-08": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/login",
+        "request_body": "username=manager&password=wrong",
+        "status": 401,
+        "reason": "UNAUTHORIZED",
+        "response_body": "[HTML page: Login - Chennai BnB PMS]"
+      },
+      {
+        "method": "POST",
+        "url": "/login",
+        "request_body": "username=manager&password=wrong",
+        "status": 401,
+        "reason": "UNAUTHORIZED",
+        "response_body": "[HTML page: Login - Chennai BnB PMS]"
+      },
+      {
+        "method": "POST",
+        "url": "/login",
+        "request_body": "username=manager&password=wrong",
+        "status": 401,
+        "reason": "UNAUTHORIZED",
+        "response_body": "[HTML page: Login - Chennai BnB PMS]"
+      },
+      {
+        "method": "POST",
+        "url": "/login",
+        "request_body": "username=manager&password=wrong",
+        "status": 401,
+        "reason": "UNAUTHORIZED",
+        "response_body": "[HTML page: Login - Chennai BnB PMS]"
+      },
+      {
+        "method": "POST",
+        "url": "/login",
+        "request_body": "username=manager&password=wrong",
+        "status": 401,
+        "reason": "UNAUTHORIZED",
+        "response_body": "[HTML page: Login - Chennai BnB PMS]"
+      },
+      {
+        "method": "POST",
+        "url": "/login",
+        "request_body": "username=manager&password=wrong",
+        "status": 401,
+        "reason": "UNAUTHORIZED",
+        "response_body": "[HTML page: Login - Chennai BnB PMS]"
+      }
+    ],
+    "outcome": "FAILED",
+    "purpose": "E2E-08: Brute-force protection journey.\n\nAfter MAX_FAILED_ATTEMPTS (5) consecutive bad passwords the account should be\nlocked out, not simply rejected again.\n\nKNOWN DEFECT D1 \u2014 the lockout helpers exist in app.py but are never called by\nthe /login route, so the 6th attempt still returns a plain 401.",
+    "assertions": [
+      "assert is_locked, ("
+    ],
+    "error": "Expected the account to be LOCKED after 5 failed attempts, but attempt 6 returned HTTP 401 with no lockout message. Defect D1: lockout helpers are never called by /login."
+  },
+  "E2E-01": {
+    "exchanges": [],
+    "outcome": "PASSED",
+    "purpose": "E2E-01: A manager signs in and lands on the dashboard.",
+    "assertions": [
+      "assert \"/dashboard\" in page.url",
+      "assert \"Hotel Manager\" in page.content()"
+    ]
+  },
+  "E2E-03": {
+    "exchanges": [],
+    "outcome": "PASSED",
+    "purpose": "E2E-03: A receptionist creates a booking through the UI form.",
+    "assertions": [
+      "assert \"/bookings\" in page.url",
+      "assert \"Anita Kumar\" in page.content()",
+      "assert query_one(\"SELECT COUNT(*) AS c FROM bookings\")[\"c\"] == 1",
+      "assert query_one(\"SELECT status FROM rooms WHERE room_id=1\")[\"status\"] == \"occupied\""
+    ]
+  },
+  "E2E-04": {
+    "exchanges": [],
+    "outcome": "PASSED",
+    "purpose": "E2E-04: confirmed -> checked_in -> checked_out, with the room freed at the end.",
+    "assertions": [
+      "assert booking[\"status\"] == \"confirmed\"",
+      "assert query_one(\"SELECT status FROM bookings WHERE booking_id=%s\",",
+      "assert query_one(\"SELECT status FROM bookings WHERE booking_id=%s\",",
+      "assert query_one(\"SELECT status FROM rooms WHERE room_id=2\")[\"status\"] == \"available\""
+    ]
+  },
+  "E2E-05": {
+    "exchanges": [],
+    "outcome": "PASSED",
+    "purpose": "E2E-05: A price change made in the UI is saved to the database. (FIXED)",
+    "assertions": [
+      "assert \"/rooms\" in page.url",
+      "assert stored == 5000.00, f\"price change was not persisted (DB still holds {stored})\""
+    ]
+  },
+  "INT-05": {
+    "exchanges": [],
+    "outcome": "PASSED",
+    "purpose": "INT-05: A booking created in the UI is returned by the REST API (shared DB).",
+    "assertions": [
+      "assert \"Integration Check\" in api_text",
+      "assert \"integration@example.com\" in api_text"
+    ]
+  },
+  "BND-01": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/login",
+        "request_body": "username=manager&password=wrongpass",
+        "status": 401,
+        "reason": "UNAUTHORIZED",
+        "response_body": "[HTML page: Login - Chennai BnB PMS]"
+      }
+    ],
+    "outcome": "PASSED",
+    "purpose": "BND-01: Correct username with wrong password is rejected with 401.",
+    "assertions": [
+      "assert resp.status_code == 401",
+      "assert \"invalid credentials\" in resp.text.lower()"
+    ]
+  },
+  "BND-02": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/login?next=https://evil.example.com",
+        "request_body": "username=manager&password=manager123",
+        "status": 302,
+        "reason": "FOUND",
+        "response_body": "[HTML page: Redirecting...]"
+      }
+    ],
+    "outcome": "PASSED",
+    "purpose": "BND-02: An absolute external URL in ?next= must not be honoured.",
+    "assertions": [
+      "assert resp.status_code in (301, 302)",
+      "assert \"evil.example.com\" not in location",
+      "assert \"/dashboard\" in location"
+    ]
+  },
+  "BND-03": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/api/bookings",
+        "request_body": "{\n  \"room_id\": 1,\n  \"guest_name\": \"Test Guest\",\n  \"guest_email\": \"test.guest@example.com\",\n  \"guest_phone\": \"9876543210\",\n  \"check_in\": \"2026-10-23\",\n  \"check_out\": \"2026-10-23\"\n}",
+        "status": 400,
+        "reason": "BAD REQUEST",
+        "response_body": "{\n  \"error\": \"Check-out must be after check-in\",\n  \"success\": false\n}"
+      }
+    ],
+    "outcome": "PASSED",
+    "purpose": "BND-03: Zero-night booking (check-out == check-in) is rejected.",
+    "assertions": [
+      "assert resp.status_code == 400",
+      "assert \"check-out must be after check-in\" in resp.json()[\"error\"].lower()"
+    ]
+  },
+  "BND-04": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/api/bookings",
+        "request_body": "{\n  \"room_id\": 1,\n  \"guest_name\": \"Test Guest\",\n  \"guest_email\": \"test.guest@example.com\",\n  \"guest_phone\": \"9876543210\",\n  \"check_in\": \"2026-10-26\",\n  \"check_out\": \"2026-10-23\"\n}",
+        "status": 400,
+        "reason": "BAD REQUEST",
+        "response_body": "{\n  \"error\": \"Check-out must be after check-in\",\n  \"success\": false\n}"
+      }
+    ],
+    "outcome": "PASSED",
+    "purpose": "BND-04: Negative-night booking (check-out before check-in) is rejected.",
+    "assertions": [
+      "assert resp.status_code == 400",
+      "assert \"check-out must be after check-in\" in resp.json()[\"error\"].lower()"
+    ]
+  },
+  "BND-05": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/api/bookings",
+        "request_body": "{\n  \"room_id\": 1,\n  \"guest_name\": \"Test Guest\",\n  \"guest_email\": \"test.guest@example.com\",\n  \"guest_phone\": \"9876543210\",\n  \"check_in\": \"2026/13/40\",\n  \"check_out\": \"2026-12-01\"\n}",
+        "status": 500,
+        "reason": "INTERNAL SERVER ERROR",
+        "response_body": "[HTML page: 500 Internal Server Error]"
+      }
+    ],
+    "outcome": "FAILED",
+    "purpose": "BND-05: A malformed date must be rejected with a clean 400 'Invalid date format'.\n\nKNOWN DEFECT \u2014 the availability check parses the dates *before* the guarded\ntry/except block, so a bad format raises an uncaught ValueError (HTTP 500).",
+    "assertions": [
+      "assert resp.status_code == 400, (",
+      "assert \"invalid date format\" in resp.json()[\"error\"].lower()"
+    ],
+    "error": "Expected 400 for a malformed date, got 500 (unhandled ValueError leaks a 500)."
+  },
+  "BND-06": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/api/bookings",
+        "request_body": "{\n  \"room_id\": 1,\n  \"guest_name\": \"Test Guest\",\n  \"guest_phone\": \"9876543210\",\n  \"check_in\": \"2026-10-22\",\n  \"check_out\": \"2026-10-24\"\n}",
+        "status": 400,
+        "reason": "BAD REQUEST",
+        "response_body": "{\n  \"error\": \"Missing required fields\",\n  \"success\": false\n}"
+      }
+    ],
+    "outcome": "PASSED",
+    "purpose": "BND-06: Omitting a required field is rejected with 400.",
+    "assertions": [
+      "assert resp.status_code == 400",
+      "assert \"missing required fields\" in resp.json()[\"error\"].lower()"
+    ]
+  },
+  "BND-07": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/api/bookings",
+        "request_body": "{\n  \"room_id\": 9999,\n  \"guest_name\": \"Test Guest\",\n  \"guest_email\": \"test.guest@example.com\",\n  \"guest_phone\": \"9876543210\",\n  \"check_in\": \"2026-10-22\",\n  \"check_out\": \"2026-10-24\"\n}",
+        "status": 404,
+        "reason": "NOT FOUND",
+        "response_body": "{\n  \"error\": \"Room not found\",\n  \"success\": false\n}"
+      }
+    ],
+    "outcome": "PASSED",
+    "purpose": "BND-07: Booking a room id that does not exist returns 404.",
+    "assertions": [
+      "assert resp.status_code == 404",
+      "assert \"room not found\" in resp.json()[\"error\"].lower()"
+    ]
+  },
+  "BND-08": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/api/bookings",
+        "request_body": "{\n  \"room_id\": 1,\n  \"guest_name\": \"Test Guest\",\n  \"guest_email\": \"test.guest@example.com\",\n  \"guest_phone\": \"9876543210\",\n  \"check_in\": \"2026-10-22\",\n  \"check_out\": \"2026-10-25\"\n}",
+        "status": 201,
+        "reason": "CREATED",
+        "response_body": "{\n  \"data\": {\n    \"booking_id\": 1,\n    \"check_in\": \"2026-10-22\",\n    \"check_out\": \"2026-10-25\",\n    \"checked_in_at\": null,\n    \"checked_out_at\": null,\n    \"created_at\": \"2026-10-21 20:41:03\",\n    \"guest_id\": 1,\n    \"room_id\": 1,\n    \"status\": \"confirmed\",\n    \"total_price\": 10500.0\n  },\n  \"success\": true\n}"
+      },
+      {
+        "method": "POST",
+        "url": "/api/bookings",
+        "request_body": "{\n  \"room_id\": 1,\n  \"guest_name\": \"Test Guest\",\n  \"guest_email\": \"test.guest@example.com\",\n  \"guest_phone\": \"9876543210\",\n  \"check_in\": \"2026-10-23\",\n  \"check_out\": \"2026-10-24\"\n}",
+        "status": 400,
+        "reason": "BAD REQUEST",
+        "response_body": "{\n  \"error\": \"Room not available\",\n  \"success\": false\n}"
+      }
+    ],
+    "outcome": "PASSED",
+    "purpose": "BND-08: An overlapping date range on the same room is rejected.",
+    "assertions": [
+      "assert first.status_code == 201",
+      "assert overlap.status_code == 400",
+      "assert \"not available\" in overlap.json()[\"error\"].lower()"
+    ]
+  },
+  "BND-09": {
+    "exchanges": [
+      {
+        "method": "PUT",
+        "url": "/api/rooms/1",
+        "request_body": "{\n  \"base_price\": 0\n}",
+        "status": 400,
+        "reason": "BAD REQUEST",
+        "response_body": "{\n  \"error\": \"Price must be greater than 0\",\n  \"success\": false\n}"
+      }
+    ],
+    "outcome": "PASSED",
+    "purpose": "BND-09: A base price of 0 is rejected.",
+    "assertions": [
+      "assert resp.status_code == 400",
+      "assert \"greater than 0\" in resp.json()[\"error\"].lower()"
+    ]
+  },
+  "BND-10": {
+    "exchanges": [],
+    "outcome": "PASSED",
+    "purpose": "BND-10: The UNIQUE constraint on rooms.room_number is enforced by the DB.",
+    "assertions": []
+  },
+  "BND-11": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/api/bookings",
+        "request_body": "{\n  \"room_id\": 1,\n  \"guest_name\": \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\n  \"guest_email\": \"test.guest@example.com\",\n  \"guest_phone\": \"9876543210\",\n  \"check_in\": \"2026-10-22\",\n  \"check_out\": \"2026-10-24\"\n}",
+        "status": 500,
+        "reason": "INTERNAL SERVER ERROR",
+        "response_body": "[HTML page: 500 Internal Server Error]"
+      }
+    ],
+    "outcome": "FAILED",
+    "purpose": "BND-11: A guest name far longer than VARCHAR(100) must be handled gracefully\n(rejected with 4xx), not crash the server.\n\nKNOWN DEFECT \u2014 the insert is unguarded, so MySQL strict mode raises\n'Data too long' and the request returns HTTP 500.",
+    "assertions": [
+      "assert resp.status_code < 500, ("
+    ],
+    "error": "Oversized input should be handled, but returned 500 (unhandled DB error)."
+  },
+  "BND-12": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/api/bookings",
+        "request_body": "{\n  \"room_id\": 1,\n  \"guest_name\": \"\",\n  \"guest_email\": \"test.guest@example.com\",\n  \"guest_phone\": \"9876543210\",\n  \"check_in\": \"2026-10-22\",\n  \"check_out\": \"2026-10-24\"\n}",
+        "status": 201,
+        "reason": "CREATED",
+        "response_body": "{\n  \"data\": {\n    \"booking_id\": 1,\n    \"check_in\": \"2026-10-22\",\n    \"check_out\": \"2026-10-24\",\n    \"checked_in_at\": null,\n    \"checked_out_at\": null,\n    \"created_at\": \"2026-10-21 20:41:04\",\n    \"guest_id\": 1,\n    \"room_id\": 1,\n    \"status\": \"confirmed\",\n    \"total_price\": 7000.0\n  },\n  \"success\": true\n}"
+      }
+    ],
+    "outcome": "FAILED",
+    "purpose": "BND-12: A present-but-blank required field must be rejected.\n\nKNOWN DEFECT D6 \u2014 the API only checks that the key exists, not that it holds\na value, so a blank guest name is accepted and a booking is created.",
+    "assertions": [
+      "assert resp.status_code == 400, ("
+    ],
+    "error": "Expected 400 for a blank guest_name, got 201 (API checks key presence only, not that the value is non-empty). Defect D6."
+  },
+  "BND-13": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/new-booking",
+        "request_body": "guest_name=Reverse+Date&guest_email=rev%40example.com&guest_phone=9876543210&room_id=1&check_in=2026-10-26&check_out=2026-10-23",
+        "status": 400,
+        "reason": "BAD REQUEST",
+        "response_body": "[HTML page: New Booking - Chennai BnB PMS]"
+      }
+    ],
+    "outcome": "PASSED",
+    "purpose": "BND-13: The /new-booking form rejects check-out before check-in. (FIXED: D2)",
+    "assertions": [
+      "assert resp.status_code == 400",
+      "assert \"check-out must be after check-in\" in resp.text.lower()",
+      "assert query_one(\"SELECT COUNT(*) AS c FROM bookings\")[\"c\"] == 0"
+    ]
+  },
+  "INT-01": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/api/bookings",
+        "request_body": "{\n  \"room_id\": 1,\n  \"guest_name\": \"Test Guest\",\n  \"guest_email\": \"test.guest@example.com\",\n  \"guest_phone\": \"9876543210\",\n  \"check_in\": \"2026-10-22\",\n  \"check_out\": \"2026-10-24\"\n}",
+        "status": 201,
+        "reason": "CREATED",
+        "response_body": "{\n  \"data\": {\n    \"booking_id\": 1,\n    \"check_in\": \"2026-10-22\",\n    \"check_out\": \"2026-10-24\",\n    \"checked_in_at\": null,\n    \"checked_out_at\": null,\n    \"created_at\": \"2026-10-21 20:41:05\",\n    \"guest_id\": 1,\n    \"room_id\": 1,\n    \"status\": \"confirmed\",\n    \"total_price\": 7000.0\n  },\n  \"success\": true\n}"
+      },
+      {
+        "method": "GET",
+        "url": "/api/bookings/1",
+        "request_body": null,
+        "status": 200,
+        "reason": "OK",
+        "response_body": "{\n  \"data\": {\n    \"booking_id\": 1,\n    \"check_in\": \"2026-10-22\",\n    \"check_out\": \"2026-10-24\",\n    \"checked_in_at\": null,\n    \"checked_out_at\": null,\n    \"created_at\": \"2026-10-21 20:41:05\",\n    \"guest_email\": \"test.guest@example.com\",\n    \"guest_id\": 1,\n    \"guest_name\": \"Test Guest\",\n    \"guest_phone\": \"9876543210\",\n    \"room_id\": 1,\n    \"room_number\": \"101\",\n    \"room_type\": \"Deluxe\",\n    \"status\": \"confirmed\",\n    \"total_price\": 7000.0\n  },\n  \"success\": true\n}"
+      }
+    ],
+    "outcome": "PASSED",
+    "purpose": "INT-01: A booking created via the API is readable back from the database.",
+    "assertions": [
+      "assert row is not None, \"booking was not written to the database\"",
+      "assert row[\"room_id\"] == 1",
+      "assert str(row[\"check_in\"]) == created[\"check_in\"]",
+      "assert str(row[\"check_out\"]) == created[\"check_out\"]",
+      "assert fetched[\"booking_id\"] == bid",
+      "assert fetched[\"room_id\"] == row[\"room_id\"]"
+    ]
+  },
+  "INT-02": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/api/bookings",
+        "request_body": "{\n  \"room_id\": 4,\n  \"guest_name\": \"Test Guest\",\n  \"guest_email\": \"test.guest@example.com\",\n  \"guest_phone\": \"9876543210\",\n  \"check_in\": \"2026-10-22\",\n  \"check_out\": \"2026-10-24\"\n}",
+        "status": 201,
+        "reason": "CREATED",
+        "response_body": "{\n  \"data\": {\n    \"booking_id\": 1,\n    \"check_in\": \"2026-10-22\",\n    \"check_out\": \"2026-10-24\",\n    \"checked_in_at\": null,\n    \"checked_out_at\": null,\n    \"created_at\": \"2026-10-21 20:41:05\",\n    \"guest_id\": 1,\n    \"room_id\": 4,\n    \"status\": \"confirmed\",\n    \"total_price\": 9000.0\n  },\n  \"success\": true\n}"
+      },
+      {
+        "method": "GET",
+        "url": "/api/rooms/4",
+        "request_body": null,
+        "status": 200,
+        "reason": "OK",
+        "response_body": "{\n  \"data\": {\n    \"amenities\": [\n      \"WiFi\",\n      \"AC\",\n      \"TV\",\n      \"Mini Fridge\",\n      \"Kitchenette\"\n    ],\n    \"base_price\": 4500.0,\n    \"current_booking_id\": 1,\n    \"current_guest\": {\n      \"booking_id\": 1,\n      \"check_in\": \"2026-10-22\",\n      \"check_out\": \"2026-10-24\",\n      \"email\": \"test.guest@example.com\",\n      \"guest_id\": 1,\n      \"name\": \"Test Guest\",\n      \"phone\": \"9876543210\"\n    },\n    \"current_guest_id\": 1,\n    \"floor\": 1,\n    \"room_id\": 4,\n    \"room_number\": \"104\",\n    \"room_type\": \"Premium\",\n    \"status\": \"occupied\"\n  },\n  \"success\": true\n}"
+      }
+    ],
+    "outcome": "PASSED",
+    "purpose": "INT-02: Creating a booking cascades the room status to 'occupied'.",
+    "assertions": [
+      "assert room[\"status\"] == \"occupied\"",
+      "assert room[\"current_booking_id\"] == created[\"booking_id\"]",
+      "assert room[\"current_guest_id\"] == created[\"guest_id\"]",
+      "assert api_room[\"status\"] == \"occupied\""
+    ]
+  },
+  "INT-03": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/api/bookings",
+        "request_body": "{\n  \"room_id\": 4,\n  \"guest_name\": \"Test Guest\",\n  \"guest_email\": \"test.guest@example.com\",\n  \"guest_phone\": \"9876543210\",\n  \"check_in\": \"2026-10-22\",\n  \"check_out\": \"2026-10-24\"\n}",
+        "status": 201,
+        "reason": "CREATED",
+        "response_body": "{\n  \"data\": {\n    \"booking_id\": 1,\n    \"check_in\": \"2026-10-22\",\n    \"check_out\": \"2026-10-24\",\n    \"checked_in_at\": null,\n    \"checked_out_at\": null,\n    \"created_at\": \"2026-10-21 20:41:05\",\n    \"guest_id\": 1,\n    \"room_id\": 4,\n    \"status\": \"confirmed\",\n    \"total_price\": 9000.0\n  },\n  \"success\": true\n}"
+      },
+      {
+        "method": "PUT",
+        "url": "/api/bookings/1",
+        "request_body": "{\n  \"status\": \"checked_out\"\n}",
+        "status": 200,
+        "reason": "OK",
+        "response_body": "{\n  \"data\": {\n    \"booking_id\": 1,\n    \"check_in\": \"2026-10-22\",\n    \"check_out\": \"2026-10-24\",\n    \"checked_in_at\": null,\n    \"checked_out_at\": \"2026-10-21 20:41:05\",\n    \"created_at\": \"2026-10-21 20:41:05\",\n    \"guest_id\": 1,\n    \"room_id\": 4,\n    \"status\": \"checked_out\",\n    \"total_price\": 9000.0\n  },\n  \"success\": true\n}"
+      }
+    ],
+    "outcome": "PASSED",
+    "purpose": "INT-03: Checking out cascades the room back to 'available'.",
+    "assertions": [
+      "assert query_one(\"SELECT status FROM rooms WHERE room_id=4\")[\"status\"] == \"occupied\"",
+      "assert resp.status_code == 200",
+      "assert room[\"status\"] == \"available\"",
+      "assert room[\"current_guest_id\"] is None"
+    ]
+  },
+  "INT-04": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/api/bookings",
+        "request_body": "{\n  \"room_id\": 5,\n  \"guest_name\": \"Test Guest\",\n  \"guest_email\": \"test.guest@example.com\",\n  \"guest_phone\": \"9876543210\",\n  \"check_in\": \"2026-10-22\",\n  \"check_out\": \"2026-10-25\"\n}",
+        "status": 201,
+        "reason": "CREATED",
+        "response_body": "{\n  \"data\": {\n    \"booking_id\": 1,\n    \"check_in\": \"2026-10-22\",\n    \"check_out\": \"2026-10-25\",\n    \"checked_in_at\": null,\n    \"checked_out_at\": null,\n    \"created_at\": \"2026-10-21 20:41:06\",\n    \"guest_id\": 1,\n    \"room_id\": 5,\n    \"status\": \"confirmed\",\n    \"total_price\": 18000.0\n  },\n  \"success\": true\n}"
+      }
+    ],
+    "outcome": "PASSED",
+    "purpose": "INT-04: total_price == room base price x number of nights.",
+    "assertions": [
+      "assert float(created[\"total_price\"]) == 18000.00",
+      "assert float(row[\"total_price\"]) == 18000.00"
+    ]
+  },
+  "INT-06": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/api/bookings",
+        "request_body": "{\n  \"room_id\": 1,\n  \"guest_name\": \"Test Guest\",\n  \"guest_email\": \"test.guest@example.com\",\n  \"guest_phone\": \"9876543210\",\n  \"check_in\": \"2026-10-22\",\n  \"check_out\": \"2026-10-24\"\n}",
+        "status": 201,
+        "reason": "CREATED",
+        "response_body": "{\n  \"data\": {\n    \"booking_id\": 1,\n    \"check_in\": \"2026-10-22\",\n    \"check_out\": \"2026-10-24\",\n    \"checked_in_at\": null,\n    \"checked_out_at\": null,\n    \"created_at\": \"2026-10-21 20:41:06\",\n    \"guest_id\": 1,\n    \"room_id\": 1,\n    \"status\": \"confirmed\",\n    \"total_price\": 7000.0\n  },\n  \"success\": true\n}"
+      },
+      {
+        "method": "DELETE",
+        "url": "/api/bookings/1",
+        "request_body": null,
+        "status": 403,
+        "reason": "FORBIDDEN",
+        "response_body": "{\n  \"error\": \"Forbidden: insufficient role\",\n  \"success\": false\n}"
+      }
+    ],
+    "outcome": "PASSED",
+    "purpose": "INT-06: The auditor role is forbidden from cancelling a booking.",
+    "assertions": [
+      "assert resp.status_code == 403",
+      "assert \"forbidden\" in resp.json()[\"error\"].lower()"
+    ]
+  },
+  "INT-07": {
+    "exchanges": [
+      {
+        "method": "GET",
+        "url": "/api/guests",
+        "request_body": null,
+        "status": 401,
+        "reason": "UNAUTHORIZED",
+        "response_body": "{\n  \"error\": \"Authentication required\",\n  \"success\": false\n}"
+      }
+    ],
+    "outcome": "PASSED",
+    "purpose": "INT-07: A guarded endpoint rejects unauthenticated access with 401.",
+    "assertions": [
+      "assert resp.status_code == 401",
+      "assert \"authentication required\" in resp.json()[\"error\"].lower()"
+    ]
+  },
+  "INT-08": {
+    "exchanges": [
+      {
+        "method": "PUT",
+        "url": "/api/rooms/1",
+        "request_body": "{\n  \"base_price\": 9999\n}",
+        "status": 200,
+        "reason": "OK",
+        "response_body": "{\n  \"data\": {\n    \"amenities\": [\n      \"WiFi\",\n      \"AC\",\n      \"TV\",\n      \"Mini Fridge\",\n      \"Kitchenette\"\n    ],\n    \"base_price\": 3500.0,\n    \"current_booking_id\": null,\n    \"current_guest\": null,\n    \"current_guest_id\": null,\n    \"floor\": 1,\n    \"room_id\": 1,\n    \"room_number\": \"101\",\n    \"room_type\": \"Deluxe\",\n    \"status\": \"available\"\n  },\n  \"message\": \"Room updated successfully\",\n  \"success\": true\n}"
+      },
+      {
+        "method": "GET",
+        "url": "/api/rooms/1",
+        "request_body": null,
+        "status": 200,
+        "reason": "OK",
+        "response_body": "{\n  \"data\": {\n    \"amenities\": [\n      \"WiFi\",\n      \"AC\",\n      \"TV\",\n      \"Mini Fridge\",\n      \"Kitchenette\"\n    ],\n    \"base_price\": 3500.0,\n    \"current_booking_id\": null,\n    \"current_guest\": null,\n    \"current_guest_id\": null,\n    \"floor\": 1,\n    \"room_id\": 1,\n    \"room_number\": \"101\",\n    \"room_type\": \"Deluxe\",\n    \"status\": \"available\"\n  },\n  \"success\": true\n}"
+      }
+    ],
+    "outcome": "FAILED",
+    "purpose": "INT-08: PUT /api/rooms/<id> must persist the new price to the database.\n\nKNOWN DEFECT D3 \u2014 the handler mutates a throwaway dict and never writes to\nMySQL, yet still reports 'Room updated successfully'.",
+    "assertions": [
+      "assert resp.status_code == 200",
+      "assert resp.json()[\"success\"] is True",
+      "assert float(after[\"base_price\"]) == 9999.00, ("
+    ],
+    "error": "PUT reported success but GET still returns 3500.0; the update was never persisted to MySQL. Defect D3."
+  },
+  "INT-09": {
+    "exchanges": [
+      {
+        "method": "POST",
+        "url": "/api/bookings",
+        "request_body": "{\n  \"room_id\": 1,\n  \"guest_name\": \"Test Guest\",\n  \"guest_email\": \"test.guest@example.com\",\n  \"guest_phone\": \"9876543210\",\n  \"check_in\": \"2026-10-22\",\n  \"check_out\": \"2026-10-24\"\n}",
+        "status": 201,
+        "reason": "CREATED",
+        "response_body": "{\n  \"data\": {\n    \"booking_id\": 1,\n    \"check_in\": \"2026-10-22\",\n    \"check_out\": \"2026-10-24\",\n    \"checked_in_at\": null,\n    \"checked_out_at\": null,\n    \"created_at\": \"2026-10-21 20:41:07\",\n    \"guest_id\": 1,\n    \"room_id\": 1,\n    \"status\": \"confirmed\",\n    \"total_price\": 7000.0\n  },\n  \"success\": true\n}"
+      }
+    ],
+    "outcome": "FAILED",
+    "purpose": "INT-09: Creating a booking is a mutation and must require authentication.\n\nKNOWN DEFECT D4 \u2014 /api/bookings carries no auth decorator, so an anonymous\ncaller can create bookings freely.",
+    "assertions": [
+      "assert resp.status_code == 401, ("
+    ],
+    "error": "Anonymous booking creation returned 201; the endpoint has no authentication guard (defect D4)."
+  }
+}

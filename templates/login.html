@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Chennai BnB PMS{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 520px; margin: 2rem auto;">
+    <h2 style="margin-bottom: 1rem;">Login</h2>
+    <p style="color: #666; margin-bottom: 1.5rem;">Sign in to access Dummy PMS operations.</p>
+
+    <form method="POST" action="{{ url_for('login') }}">
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" value="{{ username or '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+
+        <button type="submit" class="btn">Sign In</button>
+    </form>
+</div>
+
+<div class="card" style="max-width: 700px; margin: 0 auto;">
+    <h3 style="margin-bottom: 0.75rem;">Demo Accounts</h3>
+    <ul style="line-height: 1.8; padding-left: 1.2rem;">
+        <li><strong>Manager:</strong> username <code>manager</code>, password <code>manager123</code></li>
+        <li><strong>Reception:</strong> username <code>reception</code>, password <code>reception123</code></li>
+        <li><strong>Auditor:</strong> username <code>auditor</code>, password <code>auditor123</code></li>
+    </ul>
+</div>
+{% endblock %}

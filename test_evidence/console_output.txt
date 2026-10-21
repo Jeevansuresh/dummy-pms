@@ -1,0 +1,84 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.3, pytest-9.1.1, pluggy-1.6.0 -- C:\Python314\python.exe
+metadata: {'Python': '3.14.3', 'Platform': 'Windows-11-10.0.26200-SP0', 'Packages': {'pytest': '9.1.1', 'pluggy': '1.6.0'}, 'Plugins': {'anyio': '4.13.0', 'locust': '2.46.7', 'html': '4.2.0', 'metadata': '3.1.1', 'playwright': '0.10.0'}}
+rootdir: D:\everything\cyberattacks\dummy-pms
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.13.0, locust-2.46.7, html-4.2.0, metadata-3.1.1, playwright-0.10.0
+collecting ... collected 30 items
+
+tests/test_category1_e2e_api.py::test_E2E_02_protected_page_requires_login PASSED [  3%]
+tests/test_category1_e2e_api.py::test_E2E_06_api_create_booking PASSED   [  6%]
+tests/test_category1_e2e_api.py::test_E2E_07_checked_in_guests_report PASSED [ 10%]
+tests/test_category1_e2e_api.py::test_E2E_08_account_locks_after_repeated_failed_logins FAILED [ 13%]
+tests/test_category1_e2e_ui.py::test_E2E_01_login_as_manager[chromium] PASSED [ 16%]
+tests/test_category1_e2e_ui.py::test_E2E_03_create_booking_through_the_form[chromium] PASSED [ 20%]
+tests/test_category1_e2e_ui.py::test_E2E_04_full_stay_lifecycle[chromium] PASSED [ 23%]
+tests/test_category1_e2e_ui.py::test_E2E_05_edit_room_price_persists[chromium] PASSED [ 26%]
+tests/test_category1_e2e_ui.py::test_INT_05_ui_write_is_visible_through_the_api[chromium] PASSED [ 30%]
+tests/test_category2_boundary.py::test_BND_01_login_wrong_password PASSED [ 33%]
+tests/test_category2_boundary.py::test_BND_02_open_redirect_guard_on_next_param PASSED [ 36%]
+tests/test_category2_boundary.py::test_BND_03_checkout_equals_checkin PASSED [ 40%]
+tests/test_category2_boundary.py::test_BND_04_checkout_before_checkin PASSED [ 43%]
+tests/test_category2_boundary.py::test_BND_05_invalid_date_format FAILED [ 46%]
+tests/test_category2_boundary.py::test_BND_06_missing_required_field PASSED [ 50%]
+tests/test_category2_boundary.py::test_BND_07_nonexistent_room PASSED    [ 53%]
+tests/test_category2_boundary.py::test_BND_08_double_booking_overlap_rejected PASSED [ 56%]
+tests/test_category2_boundary.py::test_BND_09_room_price_zero_rejected PASSED [ 60%]
+tests/test_category2_boundary.py::test_BND_10_room_number_uniqueness_enforced PASSED [ 63%]
+tests/test_category2_boundary.py::test_BND_11_oversized_input_handled_gracefully FAILED [ 66%]
+tests/test_category2_boundary.py::test_BND_12_empty_string_required_field_rejected FAILED [ 70%]
+tests/test_category2_boundary.py::test_BND_13_booking_form_rejects_reversed_dates PASSED [ 73%]
+tests/test_category3_integration.py::test_INT_01_booking_persists_to_database PASSED [ 76%]
+tests/test_category3_integration.py::test_INT_02_booking_sets_room_occupied PASSED [ 80%]
+tests/test_category3_integration.py::test_INT_03_checkout_frees_the_room PASSED [ 83%]
+tests/test_category3_integration.py::test_INT_04_total_price_computed_from_room_and_nights PASSED [ 86%]
+tests/test_category3_integration.py::test_INT_06_auditor_cannot_mutate_bookings PASSED [ 90%]
+tests/test_category3_integration.py::test_INT_07_unauthenticated_api_access_blocked PASSED [ 93%]
+tests/test_category3_integration.py::test_INT_08_room_update_persists_to_database FAILED [ 96%]
+tests/test_category3_integration.py::test_INT_09_api_booking_creation_requires_auth FAILED [100%]
+
+================================== FAILURES ===================================
+E   AssertionError: Expected the account to be LOCKED after 5 failed attempts, but attempt 6 returned HTTP 401 with no lockout message. Defect D1: lockout helpers are never called by /login.
+    assert False
+D:\everything\cyberattacks\dummy-pms\tests\test_category1_e2e_api.py:67: AssertionError: Expected the account to be LOCKED after 5 failed attempts, but attempt 6 returned HTTP 401 with no lockout message. Defect D1: lockout helpers are never called by /login.
+E   AssertionError: Expected 400 for a malformed date, got 500 (unhandled ValueError leaks a 500).
+    assert 500 == 400
+     +  where 500 = <Response [500]>.status_code
+D:\everything\cyberattacks\dummy-pms\tests\test_category2_boundary.py:61: AssertionError: Expected 400 for a malformed date, got 500 (unhandled ValueError leaks a 500).
+E   AssertionError: Oversized input should be handled, but returned 500 (unhandled DB error).
+    assert 500 < 500
+     +  where 500 = <Response [500]>.status_code
+D:\everything\cyberattacks\dummy-pms\tests\test_category2_boundary.py:133: AssertionError: Oversized input should be handled, but returned 500 (unhandled DB error).
+E   AssertionError: Expected 400 for a blank guest_name, got 201 (API checks key presence only, not that the value is non-empty). Defect D6.
+    assert 201 == 400
+     +  where 201 = <Response [201]>.status_code
+D:\everything\cyberattacks\dummy-pms\tests\test_category2_boundary.py:149: AssertionError: Expected 400 for a blank guest_name, got 201 (API checks key presence only, not that the value is non-empty). Defect D6.
+E   AssertionError: PUT reported success but GET still returns 3500.0; the update was never persisted to MySQL. Defect D3.
+    assert 3500.0 == 9999.0
+     +  where 3500.0 = float(3500.0)
+D:\everything\cyberattacks\dummy-pms\tests\test_category3_integration.py:104: AssertionError: PUT reported success but GET still returns 3500.0; the update was never persisted to MySQL. Defect D3.
+E   AssertionError: Anonymous booking creation returned 201; the endpoint has no authentication guard (defect D4).
+    assert 201 == 401
+     +  where 201 = <Response [201]>.status_code
+D:\everything\cyberattacks\dummy-pms\tests\test_category3_integration.py:119: AssertionError: Anonymous booking creation returned 201; the endpoint has no authentication guard (defect D4).
+- Generated html report: file:///D:/everything/cyberattacks/dummy-pms/test_evidence/report.html -
+=========================== short test summary info ===========================
+FAILED tests/test_category1_e2e_api.py::test_E2E_08_account_locks_after_repeated_failed_logins - AssertionError: Expected the account to be LOCKED after 5 failed attempts, but attempt 6 returned HTTP 401 with no lockout message. Defect D1: lockout helpers are never called by /login.
+assert False
+FAILED tests/test_category2_boundary.py::test_BND_05_invalid_date_format - AssertionError: Expected 400 for a malformed date, got 500 (unhandled ValueError leaks a 500).
+assert 500 == 400
+ +  where 500 = <Response [500]>.status_code
+FAILED tests/test_category2_boundary.py::test_BND_11_oversized_input_handled_gracefully - AssertionError: Oversized input should be handled, but returned 500 (unhandled DB error).
+assert 500 < 500
+ +  where 500 = <Response [500]>.status_code
+FAILED tests/test_category2_boundary.py::test_BND_12_empty_string_required_field_rejected - AssertionError: Expected 400 for a blank guest_name, got 201 (API checks key presence only, not that the value is non-empty). Defect D6.
+assert 201 == 400
+ +  where 201 = <Response [201]>.status_code
+FAILED tests/test_category3_integration.py::test_INT_08_room_update_persists_to_database - AssertionError: PUT reported success but GET still returns 3500.0; the update was never persisted to MySQL. Defect D3.
+assert 3500.0 == 9999.0
+ +  where 3500.0 = float(3500.0)
+FAILED tests/test_category3_integration.py::test_INT_09_api_booking_creation_requires_auth - AssertionError: Anonymous booking creation returned 201; the endpoint has no authentication guard (defect D4).
+assert 201 == 401
+ +  where 201 = <Response [201]>.status_code
+======================== 6 failed, 24 passed in 20.14s ========================

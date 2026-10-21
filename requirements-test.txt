@@ -1,0 +1,10 @@
+# Test automation dependencies
+# Install with: pip install -r requirements-test.txt
+#         then: python -m playwright install chromium
+
+pytest==9.1.1
+pytest-html==4.2.0
+pytest-playwright==0.10.0
+playwright==1.64.0
+requests==2.33.1
+mysql-connector-python==26.7.0
